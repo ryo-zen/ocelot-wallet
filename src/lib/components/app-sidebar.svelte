@@ -36,87 +36,60 @@
 		],
 		navMain: [
 			{
-				title: "Playground",
-				url: "#",
+				title: "Wallet",
+				url: "/wallet",
 				icon: SquareTerminalIcon,
 				isActive: true,
 				items: [
 					{
-						title: "History",
-						url: "#",
+						title: "Dashboard",
+						url: "/wallet/dashboard",
 					},
 					{
-						title: "Starred",
-						url: "#",
+						title: "Send",
+						url: "/wallet/send",
 					},
 					{
-						title: "Settings",
-						url: "#",
+						title: "Transactions",
+						url: "/wallet/transactions",
 					},
 				],
 			},
 			{
-				title: "Models",
-				url: "#",
+				title: "L2 Messages",
+				url: "/l2-messages",
 				icon: BotIcon,
 				items: [
 					{
-						title: "Genesis",
-						url: "#",
+						title: "Create Message",
+						url: "/l2-messages/create",
 					},
 					{
-						title: "Explorer",
-						url: "#",
+						title: "View Messages",
+						url: "/l2-messages/view",
 					},
 					{
-						title: "Quantum",
-						url: "#",
-					},
-				],
-			},
-			{
-				title: "Documentation",
-				url: "#",
-				icon: BookOpenIcon,
-				items: [
-					{
-						title: "Introduction",
-						url: "#",
-					},
-					{
-						title: "Get Started",
-						url: "#",
-					},
-					{
-						title: "Tutorials",
-						url: "#",
-					},
-					{
-						title: "Changelog",
-						url: "#",
+						title: "Enhanced Transactions",
+						url: "/l2-messages/enhanced",
 					},
 				],
 			},
 			{
 				title: "Settings",
-				url: "#",
+				url: "/settings",
 				icon: Settings2Icon,
 				items: [
 					{
-						title: "General",
-						url: "#",
+						title: "Service Config",
+						url: "/settings/services",
 					},
 					{
-						title: "Team",
-						url: "#",
+						title: "Wallet Settings",
+						url: "/settings/wallet",
 					},
 					{
-						title: "Billing",
-						url: "#",
-					},
-					{
-						title: "Limits",
-						url: "#",
+						title: "Security",
+						url: "/settings/security",
 					},
 				],
 			},

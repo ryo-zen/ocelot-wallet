@@ -17,7 +17,6 @@
 		
 		if (!authState.isAuthenticated || !authState.wallet || !authState.password) {
 			errorMessage = 'Session expired - please log in again';
-			// Auto-redirect to login if not authenticated
 			setTimeout(() => {
 				window.location.href = '/login-02';
 			}, 2000);
@@ -28,7 +27,6 @@
 		errorMessage = '';
 		
 		try {
-			// Refresh session on API activity
 			authStore.refreshSession();
 			
 			const response = await fetch('http://127.0.0.1:8081/ws', {
@@ -67,11 +65,6 @@
 			isLoading = false;
 		}
 	}
-	
-	function handleLogout() {
-		authStore.logout();
-		window.location.href = '/login-02';
-	}
 
 	onMount(() => {
 		fetchBalance();
@@ -89,12 +82,12 @@
 				<Separator orientation="vertical" class="mr-2 data-[orientation=vertical]:h-4" />
 				<Breadcrumb.Root>
 					<Breadcrumb.List>
-						<Breadcrumb.Item class="hidden md:block">
-							<Breadcrumb.Link href="#">Building Your Application</Breadcrumb.Link>
-						</Breadcrumb.Item>
-						<Breadcrumb.Separator class="hidden md:block" />
 						<Breadcrumb.Item>
-							<Breadcrumb.Page>Data Fetching</Breadcrumb.Page>
+							<Breadcrumb.Link href="/wallet">Wallet</Breadcrumb.Link>
+						</Breadcrumb.Item>
+						<Breadcrumb.Separator />
+						<Breadcrumb.Item>
+							<Breadcrumb.Page>Dashboard</Breadcrumb.Page>
 						</Breadcrumb.Item>
 					</Breadcrumb.List>
 				</Breadcrumb.Root>
@@ -104,7 +97,7 @@
 			<!-- Wallet Info Card -->
 			<div class="bg-card border rounded-xl p-6">
 				<div class="flex items-center justify-between mb-4">
-					<h2 class="text-2xl font-bold">💰 Wallet Information</h2>
+					<h2 class="text-2xl font-bold">💰 Wallet Dashboard</h2>
 					<Button variant="outline" size="sm" on:click={fetchBalance} disabled={isLoading}>
 						{#if isLoading}
 							Refreshing...
@@ -135,11 +128,16 @@
 			</div>
 
 			<div class="grid auto-rows-min gap-4 md:grid-cols-3">
-				<div class="bg-muted/50 aspect-video rounded-xl"></div>
-				<div class="bg-muted/50 aspect-video rounded-xl"></div>
-				<div class="bg-muted/50 aspect-video rounded-xl"></div>
+				<div class="bg-muted/50 aspect-video rounded-xl flex items-center justify-center">
+					<span class="text-muted-foreground">Recent Transactions</span>
+				</div>
+				<div class="bg-muted/50 aspect-video rounded-xl flex items-center justify-center">
+					<span class="text-muted-foreground">Quick Actions</span>
+				</div>
+				<div class="bg-muted/50 aspect-video rounded-xl flex items-center justify-center">
+					<span class="text-muted-foreground">L2 Messages</span>
+				</div>
 			</div>
-			<div class="bg-muted/50 min-h-[100vh] flex-1 rounded-xl md:min-h-min"></div>
 		</div>
 	</Sidebar.Inset>
 </Sidebar.Provider>
