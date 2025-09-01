@@ -9,9 +9,18 @@
 	import CreditCardIcon from "@lucide/svelte/icons/credit-card";
 	import LogOutIcon from "@lucide/svelte/icons/log-out";
 	import SparklesIcon from "@lucide/svelte/icons/sparkles";
+	import { authStore } from '$lib/stores/auth.js';
+	import { goto } from '$app/navigation';
 
 	let { user }: { user: { name: string; email: string; avatar: string } } = $props();
 	const sidebar = useSidebar();
+
+	function handleLogout() {
+		// Clear all authentication data
+		authStore.logout();
+		// Navigate to login page
+		goto('/login-02');
+	}
 </script>
 
 <Sidebar.Menu>
@@ -77,7 +86,7 @@
 					</DropdownMenu.Item>
 				</DropdownMenu.Group>
 				<DropdownMenu.Separator />
-				<DropdownMenu.Item>
+				<DropdownMenu.Item onclick={handleLogout}>
 					<LogOutIcon />
 					Log out
 				</DropdownMenu.Item>

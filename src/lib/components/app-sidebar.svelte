@@ -80,6 +80,10 @@
 				icon: Settings2Icon,
 				items: [
 					{
+						title: "General",
+						url: "/settings",
+					},
+					{
 						title: "Service Config",
 						url: "/settings/services",
 					},

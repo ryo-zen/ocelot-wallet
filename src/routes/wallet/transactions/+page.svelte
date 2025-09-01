@@ -36,6 +36,7 @@
 	let messageSearch = '';
 	let isAuthenticated = false;
 	let currentWallet = '';
+	let currentAddress = '';
 
 	// Subscribe to auth store
 	authStore.subscribe(state => {
@@ -46,7 +47,7 @@
 	function getStatusBadgeClass(status?: string): string {
 		switch (status?.toLowerCase()) {
 			case 'confirmed':
-				return 'bg-green-100 text-green-800 border-green-200';
+				return 'bg-transparent text-foreground border-primary';
 			case 'pending':
 				return 'bg-yellow-100 text-yellow-800 border-yellow-200';
 			case 'failed':
@@ -54,7 +55,7 @@
 			case 'draft':
 				return 'bg-gray-100 text-gray-800 border-gray-200';
 			default:
-				return 'bg-green-100 text-green-800 border-green-200'; // Default to confirmed for transactions
+				return 'bg-transparent text-foreground border-primary'; // Default to confirmed for transactions
 		}
 	}
 
@@ -96,6 +97,7 @@
 
 			// Get user's address first
 			let userAddress = wallet;
+			currentAddress = userAddress;
 			try {
 				const addressResponse = await fetch('http://127.0.0.1:8081/ws', {
 					method: 'POST',
@@ -113,26 +115,43 @@
 					const addressResult = await addressResponse.json();
 					if (addressResult.success && addressResult.address) {
 						userAddress = addressResult.address;
+						currentAddress = userAddress;
 					}
 				}
 			} catch (e) {
 				console.log('Could not get user address, using wallet name');
 			}
 
-			// Build API URL with filters
-			let apiUrl = `http://localhost:8080/api/transactions/enhanced?sender=${encodeURIComponent(userAddress)}`;
-			if (statusFilter) {
-				apiUrl += `&status=${encodeURIComponent(statusFilter)}`;
-			}
-			if (messageSearch) {
-				apiUrl += `&search=${encodeURIComponent(messageSearch)}`;
-			}
-
-			const response = await fetch(apiUrl);
+			// API filtering is completely broken, so fetch all and filter client-side
+			
+			const response = await fetch('http://localhost:8080/api/transactions/enhanced');
 			const result = await response.json();
 
 			if (response.ok && result.transactions) {
-				transactions = result.transactions;
+				// Filter client-side for transactions where user is sender OR recipient
+				let filteredTransactions = result.transactions.filter((tx: Transaction) => 
+					tx.sender === userAddress || tx.recipient === userAddress
+				);
+
+				// Apply status filter
+				if (statusFilter) {
+					const filterValue = typeof statusFilter === 'string' ? statusFilter : statusFilter.value || '';
+					if (filterValue) {
+						filteredTransactions = filteredTransactions.filter((tx: Transaction) => 
+							(tx.status || 'confirmed').toLowerCase() === filterValue.toLowerCase()
+						);
+					}
+				}
+
+				// Apply message search
+				if (messageSearch) {
+					filteredTransactions = filteredTransactions.filter((tx: Transaction) => 
+						tx.message?.toLowerCase().includes(messageSearch.toLowerCase()) || false
+					);
+				}
+
+				// Sort by block height (newest first)
+				transactions = filteredTransactions.sort((a, b) => (b.block_height || 0) - (a.block_height || 0));
 			} else {
 				errorMessage = result.error || 'Failed to load transactions';
 			}
@@ -199,13 +218,13 @@
 		<div class="flex flex-1 flex-col gap-4 p-4 pt-0">
 			<!-- Filters Section -->
 			<div class="bg-card border rounded-xl p-6">
-				<h2 class="text-2xl font-bold mb-4">📋 Transaction History</h2>
+				<h2 class="text-2xl font-bold mb-4">Transaction History</h2>
 				
 				<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
 					<div class="space-y-2">
-						<label class="text-sm font-medium">Filter by Status</label>
+						<label for="status-filter" class="text-sm font-medium">Filter by Status</label>
 						<Select.Root bind:value={statusFilter}>
-							<Select.Trigger>
+							<Select.Trigger id="status-filter">
 								{statusFilter || 'All Statuses'}
 							</Select.Trigger>
 							<Select.Content>
@@ -221,24 +240,25 @@
 					</div>
 					
 					<div class="space-y-2">
-						<label class="text-sm font-medium">Search Messages</label>
+						<label for="message-search" class="text-sm font-medium">Search Messages</label>
 						<Input 
+							id="message-search"
 							bind:value={messageSearch} 
 							placeholder="Search in message content..."
 						/>
 					</div>
 					
 					<div class="flex items-end gap-2">
-						<Button on:click={loadTransactions} disabled={isLoading || !isAuthenticated}>
+						<Button onclick={loadTransactions} disabled={isLoading || !isAuthenticated}>
 							{#if isLoading}
 								Loading...
 							{:else if !isAuthenticated}
-								🔐 Login Required
+								Login Required
 							{:else}
 								Load Transactions
 							{/if}
 						</Button>
-						<Button variant="outline" on:click={clearFilters}>
+						<Button variant="outline" onclick={clearFilters}>
 							Clear Filters
 						</Button>
 					</div>
@@ -247,8 +267,8 @@
 
 			<!-- Status Messages -->
 			{#if errorMessage}
-				<div class="bg-red-50 border border-red-200 rounded-xl p-4 text-red-800">
-					❌ {errorMessage}
+				<div class="bg-red-50 border border-red-200 rounded-xl p-4 text-red-800 font-medium">
+					{errorMessage}
 				</div>
 			{/if}
 
@@ -276,51 +296,80 @@
 				<div class="space-y-4">
 					{#each transactions as tx}
 						<div class="bg-card border rounded-xl p-6 hover:shadow-md transition-shadow">
-							<div class="flex justify-between items-start mb-3">
-								<div class="flex items-center gap-2">
-									<h3 class="font-mono text-lg font-bold">
-										#{tx.block_height || 'Pending'} 📤 SENT {formatAmount(tx.amount)} ZEI
+							<div class="flex justify-between items-start mb-4">
+								<div class="space-y-1">
+									<h3 class="text-lg font-bold">
+										Block #{tx.block_height || 'Pending'}
 									</h3>
+									<p class="text-muted-foreground font-medium">
+										{tx.sender === currentAddress ? 'Sent' : 'Received'} {formatAmount(tx.amount)} ZEI
+									</p>
 								</div>
-								<span class="px-2 py-1 rounded-full text-xs font-medium border {getStatusBadgeClass(tx.status)}">
+								<span class="px-3 py-1 rounded-full text-xs font-semibold border {getStatusBadgeClass(tx.status)}">
 									{(tx.status || 'CONFIRMED').toUpperCase()}
 								</span>
 							</div>
 							
-							<div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm font-mono">
-								<div class="space-y-1">
-									<div class="text-white">🎯 <span class="font-medium">To:</span> {tx.recipient}</div>
-									<div class="text-white">🔗 <span class="font-medium">Block:</span> {tx.block_height || 'Pending'}</div>
-									<div class="text-white">✅ <span class="font-medium">Confirmations:</span> {tx.confirmations || 0}</div>
+							<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+								<div class="space-y-4">
+									<div class="space-y-1">
+										<span class="text-muted-foreground font-medium text-sm">Recipient</span>
+										<p class="font-mono text-sm break-all">{tx.recipient}</p>
+									</div>
+									<div class="space-y-1">
+										<span class="text-muted-foreground font-medium text-sm">Block Height</span>
+										<p class="font-mono">{tx.block_height || 'Pending'}</p>
+									</div>
+									<div class="space-y-1">
+										<span class="text-muted-foreground font-medium text-sm">Confirmations</span>
+										<p class="font-mono">{tx.confirmations || 0}</p>
+									</div>
 								</div>
-								<div class="space-y-1">
-									<div class="text-white">💰 <span class="font-medium">Fee:</span> {formatAmount(tx.fee || 5000)} ZEI</div>
-									<div class="text-white">⏰ <span class="font-medium">Time:</span> {formatDate(tx.timestamp)}</div>
-									<div class="text-white break-all">🆔 <span class="font-medium">Hash:</span> {tx.hash || tx.tx_hash || 'Pending'}</div>
+								<div class="space-y-4">
+									<div class="space-y-1">
+										<span class="text-muted-foreground font-medium text-sm">Network Fee</span>
+										<p class="font-mono">{formatAmount(tx.fee || 5000)} ZEI</p>
+									</div>
+									<div class="space-y-1">
+										<span class="text-muted-foreground font-medium text-sm">Timestamp</span>
+										<p class="font-mono text-sm">{formatDate(tx.timestamp)}</p>
+									</div>
+									<div class="space-y-1">
+										<span class="text-muted-foreground font-medium text-sm">Hash</span>
+										<p class="font-mono text-sm break-all">{tx.hash || tx.tx_hash || 'Pending'}</p>
+									</div>
 								</div>
 							</div>
 							
 							{#if tx.message || tx.category || tx.reference_id || (tx.tags && tx.tags.length > 0)}
-								<div class="mt-4 pt-4 border-t border-gray-100">
-									<h4 class="font-medium text-sm mb-2">📝 Enhanced Data</h4>
-									<div class="space-y-1 text-sm">
+								<div class="mt-6 pt-4 border-t border-border">
+									<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 										{#if tx.message}
-											<div class="text-white">💬 <span class="font-medium">Message:</span> "{tx.message}"</div>
+											<div class="space-y-1">
+												<span class="text-muted-foreground font-medium text-sm">Message</span>
+												<p class="text-sm font-medium">"{tx.message}"</p>
+											</div>
 										{/if}
 										{#if tx.category}
-											<div class="text-white">🏷️ <span class="font-medium">Category:</span> {tx.category}</div>
+											<div class="space-y-1">
+												<span class="text-muted-foreground font-medium text-sm">Category</span>
+												<p class="text-sm font-medium capitalize">{tx.category}</p>
+											</div>
 										{/if}
 										{#if tx.reference_id}
-											<div class="text-white">🔗 <span class="font-medium">Reference:</span> {tx.reference_id}</div>
+											<div class="space-y-1">
+												<span class="text-muted-foreground font-medium text-sm">Reference ID</span>
+												<p class="text-sm font-mono">{tx.reference_id}</p>
+											</div>
 										{/if}
 										{#if tx.tags && tx.tags.length > 0}
-											<div class="text-white">
-												🏷️ <span class="font-medium">Tags:</span> 
-												<span class="inline-flex gap-1 ml-1">
+											<div class="space-y-1">
+												<span class="text-muted-foreground font-medium text-sm">Tags</span>
+												<div class="flex flex-wrap gap-1">
 													{#each tx.tags as tag}
-														<span class="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">{tag}</span>
+														<span class="px-2 py-1 bg-secondary text-secondary-foreground rounded text-xs font-medium">{tag}</span>
 													{/each}
-												</span>
+												</div>
 											</div>
 										{/if}
 									</div>
@@ -331,17 +380,16 @@
 				</div>
 			{:else if !isLoading && !errorMessage}
 				<div class="bg-card border rounded-xl p-8 text-center">
-					<div class="text-6xl mb-4">📭</div>
 					<h3 class="text-xl font-semibold mb-2">No Transactions Found</h3>
-					<p class="text-white mb-4">
+					<p class="text-muted-foreground mb-4">
 						{#if statusFilter || messageSearch}
 							No transactions match your current filters.
 						{:else}
-							You haven't made any enhanced transactions yet.
+							You haven't made any transactions yet.
 						{/if}
 					</p>
 					{#if statusFilter || messageSearch}
-						<Button variant="outline" on:click={clearFilters}>
+						<Button variant="outline" onclick={clearFilters}>
 							Clear Filters
 						</Button>
 					{/if}
@@ -349,9 +397,11 @@
 			{/if}
 
 			{#if !isLoading && transactions.length > 0}
-				<div class="bg-blue-50 border border-blue-200 rounded-xl p-4">
-					<div class="flex items-center gap-2 text-blue-800">
-						<span class="text-sm font-medium">📊 Found {transactions.length} enhanced transaction{transactions.length !== 1 ? 's' : ''} for {currentWallet}</span>
+				<div class="bg-muted border rounded-xl p-4">
+					<div class="flex items-center justify-center">
+						<span class="text-sm font-medium text-muted-foreground">
+							Found {transactions.length} transaction{transactions.length !== 1 ? 's' : ''} for {currentWallet}
+						</span>
 					</div>
 				</div>
 			{/if}
