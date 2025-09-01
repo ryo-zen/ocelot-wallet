@@ -23,9 +23,9 @@
 	</div>
 	<div class="bg-muted relative hidden lg:block">
 		<img
-			src="/placeholder.svg"
+			src="/placeholder.jpg"
 			alt="placeholder"
-			class="absolute inset-0 h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
+			class="absolute inset-0 h-full w-full object-cover"
 		/>
 	</div>
 </div>

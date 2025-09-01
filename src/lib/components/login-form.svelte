@@ -18,9 +18,9 @@
 	
 	// Wallet selection state
 	let selectedWallet = $state("");
-	let password = "";
-	let errorMessage = "";
-	let isLoading = false;
+	let password = $state("");
+	let errorMessage = $state("");
+	let isLoading = $state(false);
 
 	// Available wallets
 	const wallets = [
@@ -108,7 +108,7 @@
 	}
 </script>
 
-<form class={cn("flex flex-col gap-6", className)} bind:this={ref} on:submit={handleSubmit} {...restProps}>
+<form class={cn("flex flex-col gap-6", className)} bind:this={ref} onsubmit={handleSubmit} {...restProps}>
 	<div class="flex flex-col items-center gap-2 text-center">
 		<h1 class="text-2xl font-bold">Access Your Wallet</h1>
 		<p class="text-muted-foreground text-balance text-sm">
@@ -151,6 +151,15 @@
 			{:else}
 				Access Wallet
 			{/if}
+		</Button>
+		
+		<Button 
+			type="button" 
+			variant="outline" 
+			class="w-full" 
+			onclick={() => goto('/wallet/create/name')}
+		>
+			Create New Wallet
 		</Button>
 	</div>
 </form>

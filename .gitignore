@@ -28,3 +28,7 @@ shadcn-svelte-mcp-server.js
 shadcn_svelte_docs_cache/
 shadcn_svelte_docs_mcp/
 reference/
+static/placeholder.jpg
+static/avatars/shadcn.jpg
+user-onboarding.md
+wallet-creation-flow.md

@@ -1,4 +1,4 @@
-import { writable } from 'svelte/store';
+import { writable, get } from 'svelte/store';
 import { browser } from '$app/environment';
 
 export type Theme = 'default' | 'geist' | 'nature';
@@ -45,7 +45,8 @@ function loadInitialState(): ThemeState {
 const initialState = loadInitialState();
 
 function createThemeStore() {
-	const { subscribe, set, update } = writable<ThemeState>(initialState);
+	const store = writable<ThemeState>(initialState);
+	const { subscribe, set, update } = store;
 
 	function applyTheme(state: ThemeState) {
 		if (!browser) return;
@@ -116,13 +117,11 @@ function createThemeStore() {
 			});
 		},
 		getTheme: () => {
-			let currentState: ThemeState;
-			subscribe(state => currentState = state)();
+			const currentState = get(store);
 			return currentState.theme;
 		},
 		getMode: () => {
-			let currentState: ThemeState;
-			subscribe(state => currentState = state)();
+			const currentState = get(store);
 			return currentState.mode;
 		}
 	};

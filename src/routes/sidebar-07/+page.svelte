@@ -105,7 +105,7 @@
 			<div class="bg-card border rounded-xl p-6">
 				<div class="flex items-center justify-between mb-4">
 					<h2 class="text-2xl font-bold">💰 Wallet Information</h2>
-					<Button variant="outline" size="sm" on:click={fetchBalance} disabled={isLoading}>
+					<Button variant="outline" size="sm" onclick={fetchBalance} disabled={isLoading}>
 						{#if isLoading}
 							Refreshing...
 						{:else}
@@ -116,11 +116,11 @@
 				
 				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 					<div>
-						<label class="text-sm font-medium text-muted-foreground">Current Wallet</label>
+						<span class="text-sm font-medium text-muted-foreground">Current Wallet</span>
 						<div class="text-xl font-bold text-primary">{currentWallet || 'Not logged in'}</div>
 					</div>
 					<div class="text-right">
-						<label class="text-sm font-medium text-muted-foreground">Balance</label>
+						<span class="text-sm font-medium text-muted-foreground">Balance</span>
 						<div class="text-xl font-bold text-green-600">
 							{#if isLoading}
 								Loading...

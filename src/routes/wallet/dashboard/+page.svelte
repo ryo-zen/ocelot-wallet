@@ -13,22 +13,32 @@
 	let errorMessage = $state('');
 
 	async function fetchBalance() {
-		const authState = authStore.getCredentials();
-		
-		if (!authState.isAuthenticated || !authState.wallet || !authState.password) {
-			errorMessage = 'Session expired - please log in again';
-			setTimeout(() => {
-				window.location.href = '/login-02';
-			}, 2000);
-			return;
-		}
-		
 		isLoading = true;
 		errorMessage = '';
 		
+		// First, try to refresh the session
+		const sessionRefreshed = authStore.refreshSession();
+		if (!sessionRefreshed) {
+			errorMessage = 'Session expired - please log in again';
+			isLoading = false;
+			setTimeout(() => {
+				window.location.href = '/login-02';
+			}, 3000);
+			return;
+		}
+		
+		// Get credentials after refreshing session
+		const authState = authStore.getCredentials();
+		if (!authState.isAuthenticated || !authState.wallet || !authState.password) {
+			errorMessage = 'Authentication required - please log in again';
+			isLoading = false;
+			setTimeout(() => {
+				window.location.href = '/login-02';
+			}, 3000);
+			return;
+		}
+		
 		try {
-			authStore.refreshSession();
-			
 			const response = await fetch('http://127.0.0.1:8081/ws', {
 				method: 'POST',
 				headers: {
@@ -67,6 +77,7 @@
 	}
 
 	onMount(() => {
+		console.log('Dashboard onMount - calling fetchBalance');
 		fetchBalance();
 	});
 </script>
@@ -97,45 +108,68 @@
 			<!-- Wallet Info Card -->
 			<div class="bg-card border rounded-xl p-6">
 				<div class="flex items-center justify-between mb-4">
-					<h2 class="text-2xl font-bold">💰 Wallet Dashboard</h2>
-					<Button variant="outline" size="sm" on:click={fetchBalance} disabled={isLoading}>
+					<h2 class="text-2xl font-bold">Wallet Dashboard</h2>
+					<Button variant="outline" size="sm" onclick={fetchBalance} disabled={isLoading}>
 						{#if isLoading}
 							Refreshing...
 						{:else}
-							🔄 Refresh
+							Refresh
 						{/if}
 					</Button>
 				</div>
 				
-				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-					<div>
-						<label class="text-sm font-medium text-muted-foreground">Current Wallet</label>
-						<div class="text-xl font-bold text-primary">{currentWallet || 'Not logged in'}</div>
+				{#if errorMessage}
+					<div class="bg-red-50 border border-red-200 rounded-xl p-4 text-red-800 font-medium mb-4">
+						{errorMessage}
 					</div>
-					<div class="text-right">
-						<label class="text-sm font-medium text-muted-foreground">Balance</label>
-						<div class="text-xl font-bold text-green-600">
+				{/if}
+				
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+					<div class="space-y-1">
+						<span class="text-sm font-medium text-muted-foreground">Current Wallet</span>
+						<p class="text-xl font-bold text-primary">{currentWallet || 'Not logged in'}</p>
+					</div>
+					<div class="space-y-1 text-right">
+						<span class="text-sm font-medium text-muted-foreground">Balance</span>
+						<p class="text-xl font-bold text-primary">
 							{#if isLoading}
 								Loading...
-							{:else if errorMessage}
-								<span class="text-red-500">Error: {errorMessage}</span>
 							{:else}
 								{currentBalance} ZEI
 							{/if}
-						</div>
+						</p>
 					</div>
 				</div>
 			</div>
 
-			<div class="grid auto-rows-min gap-4 md:grid-cols-3">
-				<div class="bg-muted/50 aspect-video rounded-xl flex items-center justify-center">
-					<span class="text-muted-foreground">Recent Transactions</span>
+			<div class="grid gap-6 md:grid-cols-3">
+				<div class="bg-card border rounded-xl p-6 hover:shadow-md transition-shadow">
+					<div class="space-y-1 mb-4">
+						<h3 class="text-lg font-bold">Recent Transactions</h3>
+						<p class="text-muted-foreground font-medium">Latest activity</p>
+					</div>
+					<div class="text-center py-8">
+						<span class="text-muted-foreground">No recent transactions</span>
+					</div>
 				</div>
-				<div class="bg-muted/50 aspect-video rounded-xl flex items-center justify-center">
-					<span class="text-muted-foreground">Quick Actions</span>
+				<div class="bg-card border rounded-xl p-6 hover:shadow-md transition-shadow">
+					<div class="space-y-1 mb-4">
+						<h3 class="text-lg font-bold">Quick Actions</h3>
+						<p class="text-muted-foreground font-medium">Common tasks</p>
+					</div>
+					<div class="space-y-2">
+						<Button class="w-full" onclick={() => window.location.href = '/wallet/send'}>Send ZEI</Button>
+						<Button variant="outline" class="w-full" onclick={() => window.location.href = '/wallet/transactions'}>View Transactions</Button>
+					</div>
 				</div>
-				<div class="bg-muted/50 aspect-video rounded-xl flex items-center justify-center">
-					<span class="text-muted-foreground">L2 Messages</span>
+				<div class="bg-card border rounded-xl p-6 hover:shadow-md transition-shadow">
+					<div class="space-y-1 mb-4">
+						<h3 class="text-lg font-bold">L2 Messages</h3>
+						<p class="text-muted-foreground font-medium">Enhanced messaging</p>
+					</div>
+					<div class="text-center py-8">
+						<span class="text-muted-foreground">Feature coming soon</span>
+					</div>
 				</div>
 			</div>
 		</div>

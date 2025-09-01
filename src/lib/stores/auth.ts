@@ -1,4 +1,4 @@
-import { writable } from 'svelte/store';
+import { writable, get } from 'svelte/store';
 
 interface AuthState {
 	wallet: string | null;
@@ -7,12 +7,44 @@ interface AuthState {
 	sessionExpiry: number | null;
 }
 
-const initialState: AuthState = {
-	wallet: null,
-	encryptedPassword: null,
-	isAuthenticated: false,
-	sessionExpiry: null
-};
+// Load persisted session from storage
+function loadPersistedSession(): AuthState {
+	if (typeof window === 'undefined') {
+		return {
+			wallet: null,
+			encryptedPassword: null,
+			isAuthenticated: false,
+			sessionExpiry: null
+		};
+	}
+	
+	try {
+		const stored = sessionStorage.getItem('wallet_session');
+		if (stored) {
+			const parsed = JSON.parse(stored);
+			// Check if session is still valid
+			if (parsed.sessionExpiry && Date.now() < parsed.sessionExpiry) {
+				console.log('Restored session from storage:', parsed.wallet);
+				return parsed;
+			} else {
+				console.log('Stored session expired, clearing');
+				sessionStorage.removeItem('wallet_session');
+			}
+		}
+	} catch (e) {
+		console.log('Failed to load persisted session:', e);
+		sessionStorage.removeItem('wallet_session');
+	}
+	
+	return {
+		wallet: null,
+		encryptedPassword: null,
+		isAuthenticated: false,
+		sessionExpiry: null
+	};
+}
+
+const initialState: AuthState = loadPersistedSession();
 
 // Simple XOR encryption for password obfuscation in memory
 function encryptPassword(password: string): string {
@@ -38,17 +70,40 @@ function decryptPassword(encryptedPassword: string): string {
 	}
 }
 
-// Session timeout (15 minutes)
-const SESSION_TIMEOUT_MS = 15 * 60 * 1000;
+// Session timeout (30 minutes - less aggressive)
+const SESSION_TIMEOUT_MS = 30 * 60 * 1000;
 
 function createAuthStore() {
-	const { subscribe, set, update } = writable<AuthState>(initialState);
-	let sessionTimer: NodeJS.Timeout | null = null;
+	const store = writable<AuthState>(initialState);
+	const { subscribe, set, update } = store;
+	let sessionTimer: number | null = null;
+
+	// Persist state to sessionStorage whenever it changes
+	function persistSession(state: AuthState) {
+		if (typeof window !== 'undefined') {
+			try {
+				if (state.isAuthenticated) {
+					sessionStorage.setItem('wallet_session', JSON.stringify(state));
+					console.log('Session persisted to storage');
+				} else {
+					sessionStorage.removeItem('wallet_session');
+					console.log('Session removed from storage');
+				}
+			} catch (e) {
+				console.error('Failed to persist session:', e);
+			}
+		}
+	}
 
 	// Auto-logout on session timeout
 	function startSessionTimer() {
-		if (sessionTimer) clearTimeout(sessionTimer);
+		console.log('startSessionTimer called - timeout in', SESSION_TIMEOUT_MS / 1000, 'seconds');
+		if (sessionTimer) {
+			console.log('Clearing existing session timer');
+			clearTimeout(sessionTimer);
+		}
 		sessionTimer = setTimeout(() => {
+			console.log('Session timer expired - calling logout');
 			logout();
 		}, SESSION_TIMEOUT_MS);
 	}
@@ -61,45 +116,61 @@ function createAuthStore() {
 		}
 
 		// Overwrite sensitive data in memory
+		const clearedState = {
+			wallet: null,
+			encryptedPassword: null,
+			isAuthenticated: false,
+			sessionExpiry: null
+		};
 		update(state => {
 			if (state.encryptedPassword) {
 				// Overwrite encrypted password with random data
 				state.encryptedPassword = btoa(Math.random().toString(36) + Math.random().toString(36));
 			}
-			return initialState;
+			return clearedState;
 		});
+		persistSession(clearedState);
 
 		// Force garbage collection hint
-		if (window.gc) window.gc();
+		if ('gc' in window && typeof (window as any).gc === 'function') {
+			(window as any).gc();
+		}
 	}
 
-	// Check session validity
+	// Check if session is expired (without auto-logout)
+	function isSessionExpired(): boolean {
+		const currentState = get(store);
+		
+		if (!currentState.isAuthenticated || !currentState.sessionExpiry) {
+			return true;
+		}
+
+		return Date.now() > currentState.sessionExpiry;
+	}
+
+	// Check session validity (for internal use only)
 	function isSessionValid(): boolean {
-		let currentState: AuthState;
-		subscribe(state => currentState = state)();
+		const currentState = get(store);
 		
 		if (!currentState.isAuthenticated || !currentState.sessionExpiry) {
 			return false;
 		}
 
-		if (Date.now() > currentState.sessionExpiry) {
-			logout();
-			return false;
-		}
-
-		return true;
+		return Date.now() <= currentState.sessionExpiry;
 	}
 
 	return {
 		subscribe,
 		login: (wallet: string, password: string) => {
 			const sessionExpiry = Date.now() + SESSION_TIMEOUT_MS;
-			set({
+			const newState = {
 				wallet,
 				encryptedPassword: encryptPassword(password),
 				isAuthenticated: true,
 				sessionExpiry
-			});
+			};
+			set(newState);
+			persistSession(newState);
 			
 			// Clear password from parameter immediately
 			password = '';
@@ -108,48 +179,63 @@ function createAuthStore() {
 		},
 		logout,
 		getCredentials: () => {
-			if (!isSessionValid()) {
-				return { wallet: null, password: null, isAuthenticated: false };
+			const currentState = get(store);
+			
+			// If session expired, return expired status but don't auto-logout
+			if (isSessionExpired()) {
+				return { 
+					wallet: currentState.wallet, 
+					password: null, 
+					isAuthenticated: false,
+					sessionExpired: true 
+				};
 			}
 
-			let currentState: AuthState;
-			subscribe(state => currentState = state)();
-			
 			return {
 				wallet: currentState.wallet,
 				password: currentState.encryptedPassword ? decryptPassword(currentState.encryptedPassword) : null,
-				isAuthenticated: currentState.isAuthenticated
+				isAuthenticated: currentState.isAuthenticated,
+				sessionExpired: false
 			};
 		},
 		refreshSession: () => {
-			if (isSessionValid()) {
-				update(state => ({
-					...state,
+			// Always refresh session if user is authenticated, even if expired
+			const currentState = get(store);
+			
+			console.log('refreshSession - currentState:', {
+				isAuthenticated: currentState.isAuthenticated,
+				wallet: currentState.wallet,
+				hasEncryptedPassword: !!currentState.encryptedPassword,
+				sessionExpiry: currentState.sessionExpiry,
+				now: Date.now()
+			});
+			
+			if (currentState.isAuthenticated && currentState.wallet && currentState.encryptedPassword) {
+				console.log('refreshSession - updating session expiry');
+				const refreshedState = {
+					...currentState,
 					sessionExpiry: Date.now() + SESSION_TIMEOUT_MS
-				}));
+				};
+				update(state => refreshedState);
+				persistSession(refreshedState);
 				startSessionTimer();
+				return true; // Session refreshed successfully
 			}
-		}
+			console.log('refreshSession - cannot refresh, missing auth data');
+			return false; // Cannot refresh - no valid auth state
+		},
+		// Add line numbers for debugging
+		debugGetCurrentLine: () => console.log('This is around line 170')
 	};
 }
 
 export const authStore = createAuthStore();
 
-// Auto-logout on page unload/close
-if (typeof window !== 'undefined') {
-	window.addEventListener('beforeunload', () => {
-		authStore.logout();
-	});
-
-	// Auto-logout on browser tab visibility change (security measure)
-	document.addEventListener('visibilitychange', () => {
-		if (document.hidden) {
-			// Don't logout immediately, but start a shorter timer
-			setTimeout(() => {
-				if (document.hidden) {
-					authStore.logout();
-				}
-			}, 5 * 60 * 1000); // 5 minutes if tab is hidden
-		}
-	});
-}
+// ALL AUTOMATIC LOGOUT DISABLED FOR DEBUGGING
+// Auto-logout on page unload/close - DISABLED
+// if (typeof window !== 'undefined') {
+// 	window.addEventListener('beforeunload', () => {
+// 		console.log('beforeunload event - logging out');
+// 		authStore.logout();
+// 	});
+// }

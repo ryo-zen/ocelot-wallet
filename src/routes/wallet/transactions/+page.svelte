@@ -32,7 +32,7 @@
 	let transactions: Transaction[] = [];
 	let isLoading = false;
 	let errorMessage = '';
-	let statusFilter = '';
+	let statusFilter: string[] = [];
 	let messageSearch = '';
 	let isAuthenticated = false;
 	let currentWallet = '';
@@ -134,13 +134,10 @@
 				);
 
 				// Apply status filter
-				if (statusFilter) {
-					const filterValue = typeof statusFilter === 'string' ? statusFilter : statusFilter.value || '';
-					if (filterValue) {
-						filteredTransactions = filteredTransactions.filter((tx: Transaction) => 
-							(tx.status || 'confirmed').toLowerCase() === filterValue.toLowerCase()
-						);
-					}
+				if (statusFilter.length > 0) {
+					filteredTransactions = filteredTransactions.filter((tx: Transaction) => 
+						statusFilter.includes((tx.status || 'confirmed').toLowerCase())
+					);
 				}
 
 				// Apply message search
@@ -151,7 +148,7 @@
 				}
 
 				// Sort by block height (newest first)
-				transactions = filteredTransactions.sort((a, b) => (b.block_height || 0) - (a.block_height || 0));
+				transactions = filteredTransactions.sort((a: Transaction, b: Transaction) => (b.block_height || 0) - (a.block_height || 0));
 			} else {
 				errorMessage = result.error || 'Failed to load transactions';
 			}
@@ -178,7 +175,7 @@
 	}
 
 	function clearFilters() {
-		statusFilter = '';
+		statusFilter = [];
 		messageSearch = '';
 		transactions = [];
 		errorMessage = '';
@@ -223,17 +220,17 @@
 				<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
 					<div class="space-y-2">
 						<label for="status-filter" class="text-sm font-medium">Filter by Status</label>
-						<Select.Root bind:value={statusFilter}>
+						<Select.Root type="multiple" value={statusFilter} onValueChange={(value: string[]) => statusFilter = value}>
 							<Select.Trigger id="status-filter">
-								{statusFilter || 'All Statuses'}
+								{statusFilter.length > 0 ? statusFilter.join(', ') : 'All Statuses'}
 							</Select.Trigger>
 							<Select.Content>
 								<Select.Group>
-									<Select.Item value="">All Statuses</Select.Item>
-									<Select.Item value="confirmed">Confirmed</Select.Item>
-									<Select.Item value="pending">Pending</Select.Item>
-									<Select.Item value="draft">Draft</Select.Item>
-									<Select.Item value="failed">Failed</Select.Item>
+									<Select.Item value={""}>All Statuses</Select.Item>
+									<Select.Item value={"confirmed"}>Confirmed</Select.Item>
+									<Select.Item value={"pending"}>Pending</Select.Item>
+									<Select.Item value={"draft"}>Draft</Select.Item>
+									<Select.Item value={"failed"}>Failed</Select.Item>
 								</Select.Group>
 							</Select.Content>
 						</Select.Root>
@@ -382,13 +379,13 @@
 				<div class="bg-card border rounded-xl p-8 text-center">
 					<h3 class="text-xl font-semibold mb-2">No Transactions Found</h3>
 					<p class="text-muted-foreground mb-4">
-						{#if statusFilter || messageSearch}
+						{#if statusFilter.length > 0 || messageSearch}
 							No transactions match your current filters.
 						{:else}
 							You haven't made any transactions yet.
 						{/if}
 					</p>
-					{#if statusFilter || messageSearch}
+					{#if statusFilter.length > 0 || messageSearch}
 						<Button variant="outline" onclick={clearFilters}>
 							Clear Filters
 						</Button>
