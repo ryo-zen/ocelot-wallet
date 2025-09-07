@@ -6,9 +6,11 @@
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { onMount } from 'svelte';
 	import { authStore } from '$lib/stores/auth.js';
+	import { databaseService } from '$lib/services/database.js';
 
 	let currentWallet = $state('');
 	let currentBalance = $state('');
+	let walletAddress = $state('');
 	let isLoading = $state(false);
 	let errorMessage = $state('');
 
@@ -29,7 +31,7 @@
 		
 		// Get credentials after refreshing session
 		const authState = authStore.getCredentials();
-		if (!authState.isAuthenticated || !authState.wallet || !authState.password) {
+		if (!authState.isAuthenticated || !authState.wallet) {
 			errorMessage = 'Authentication required - please log in again';
 			isLoading = false;
 			setTimeout(() => {
@@ -39,38 +41,29 @@
 		}
 		
 		try {
-			const response = await fetch('http://127.0.0.1:8081/ws', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-				},
-				body: JSON.stringify({
-					command: 'balance',
-					wallet: authState.wallet,
-					password: authState.password
-				})
+			// Use database service for both address lookup and balance query
+			const result = await databaseService.getWalletBalance(authState.wallet);
+			
+			// Format balance with proper decimal places for ZEI
+			currentBalance = result.balance.toLocaleString('en-US', {
+				minimumFractionDigits: 2,
+				maximumFractionDigits: 8
 			});
-
-			if (!response.ok) {
-				const responseText = await response.text();
-				throw new Error(`HTTP ${response.status}: ${responseText}`);
-			}
 			
-			const result = await response.json();
+			currentWallet = authState.wallet;
+			walletAddress = result.address;
+			// Clear any previous error messages on success
+			errorMessage = '';
 			
-			if (result.error) {
-				throw new Error(result.error);
-			}
-			
-			if (result.success) {
-				currentBalance = result.balance || 'Unknown';
-				currentWallet = authState.wallet;
-			} else {
-				throw new Error(`Balance command failed: ${JSON.stringify(result)}`);
-			}
 		} catch (error) {
 			console.error('Balance fetch error:', error);
-			errorMessage = error instanceof Error ? error.message : 'Failed to fetch balance';
+			if (error instanceof Error) {
+				errorMessage = error.message;
+				currentBalance = 'Error';
+			} else {
+				errorMessage = 'Failed to fetch balance from database';
+				currentBalance = 'Error';
+			}
 		} finally {
 			isLoading = false;
 		}
@@ -125,9 +118,15 @@
 				{/if}
 				
 				<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-					<div class="space-y-1">
-						<span class="text-sm font-medium text-muted-foreground">Current Wallet</span>
-						<p class="text-xl font-bold text-primary">{currentWallet || 'Not logged in'}</p>
+					<div class="space-y-4">
+						<div class="space-y-1">
+							<span class="text-sm font-medium text-muted-foreground">Current Wallet</span>
+							<p class="text-xl font-bold text-primary">{currentWallet || 'Not logged in'}</p>
+						</div>
+						<div class="space-y-1">
+							<span class="text-sm font-medium text-muted-foreground">Wallet Address</span>
+							<p class="font-mono text-sm break-all">{walletAddress || 'Not available'}</p>
+						</div>
 					</div>
 					<div class="space-y-1 text-right">
 						<span class="text-sm font-medium text-muted-foreground">Balance</span>

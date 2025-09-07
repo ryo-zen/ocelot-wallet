@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { Label } from "$lib/components/ui/label/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
 	import { Button } from "$lib/components/ui/button/index.js";
@@ -21,18 +22,73 @@
 	let password = $state("");
 	let errorMessage = $state("");
 	let isLoading = $state(false);
+	let walletsLoading = $state(false);
 
-	// Available wallets
-	const wallets = [
-		{ value: "alice", label: "Alice" },
-		{ value: "bob", label: "Bob" },
-		{ value: "miner", label: "Miner" },
-		{ value: "charlie", label: "Charlie" }
-	];
+	// Available wallets - dynamically discovered
+	let wallets = $state<Array<{ value: string; label: string }>>([]);
 
 	const triggerContent = $derived(
 		wallets.find((w) => w.value === selectedWallet)?.label ?? "Select a wallet"
 	);
+
+	// Fetch available wallets dynamically from filesystem
+	async function fetchAvailableWallets(): Promise<string[]> {
+		try {
+			const response = await fetch('/api/wallets', {
+				method: 'GET',
+				headers: {
+					'Content-Type': 'application/json',
+				}
+			});
+
+			if (!response.ok) {
+				throw new Error(`HTTP error! status: ${response.status}`);
+			}
+
+			const result = await response.json();
+			
+			if (!result.success) {
+				throw new Error(result.error || 'Failed to discover wallets');
+			}
+			
+			return result.wallets || [];
+		} catch (error) {
+			console.error('Failed to fetch wallets:', error);
+			throw error;
+		}
+	}
+
+	// Load wallets dynamically on component mount
+	onMount(async () => {
+		walletsLoading = true;
+		errorMessage = '';
+		
+		try {
+			const walletNames = await fetchAvailableWallets();
+			
+			// Convert wallet names to the format expected by the Select component
+			wallets = walletNames.map(name => ({
+				value: name,
+				label: name.charAt(0).toUpperCase() + name.slice(1)
+			}));
+			
+			if (wallets.length === 0) {
+				errorMessage = 'No wallets found in the system. Please create a wallet first.';
+			}
+		} catch (error) {
+			if (error instanceof Error) {
+				if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+					errorMessage = 'Unable to connect to wallet service. Please ensure the wallet service is running.';
+				} else {
+					errorMessage = `Failed to load wallets: ${error.message}`;
+				}
+			} else {
+				errorMessage = 'An unexpected error occurred while loading wallets';
+			}
+		} finally {
+			walletsLoading = false;
+		}
+	});
 
 	async function validateWallet(wallet: string, password: string): Promise<boolean> {
 		try {
@@ -68,6 +124,18 @@
 
 	async function handleSubmit(event: Event) {
 		event.preventDefault();
+		
+		// Don't allow submission if wallets are still loading
+		if (walletsLoading) {
+			errorMessage = 'Please wait while wallets are loading';
+			return;
+		}
+		
+		// Don't allow submission if no wallets are available
+		if (wallets.length === 0) {
+			errorMessage = 'No wallets available. Please create a wallet first.';
+			return;
+		}
 		
 		if (!selectedWallet || !password) {
 			errorMessage = 'Please select a wallet and enter password';
@@ -118,9 +186,15 @@
 	<div class="grid gap-6">
 		<div class="grid gap-3">
 			<Label>Wallet</Label>
-			<Select.Root type="single" name="walletSelect" bind:value={selectedWallet}>
+			<Select.Root type="single" name="walletSelect" bind:value={selectedWallet} disabled={walletsLoading || wallets.length === 0}>
 				<Select.Trigger class="w-full">
-					{triggerContent}
+					{#if walletsLoading}
+						Loading wallets...
+					{:else if wallets.length === 0}
+						No wallets available
+					{:else}
+						{triggerContent}
+					{/if}
 				</Select.Trigger>
 				<Select.Content>
 					<Select.Group>
@@ -145,8 +219,10 @@
 			</div>
 		{/if}
 		
-		<Button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white" disabled={isLoading}>
-			{#if isLoading}
+		<Button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white" disabled={isLoading || walletsLoading || wallets.length === 0}>
+			{#if walletsLoading}
+				Loading wallets...
+			{:else if isLoading}
 				Validating...
 			{:else}
 				Access Wallet
@@ -160,6 +236,15 @@
 			onclick={() => goto('/wallet/create/name')}
 		>
 			Create New Wallet
+		</Button>
+		
+		<Button 
+			type="button" 
+			variant="outline" 
+			class="w-full" 
+			onclick={() => goto('/wallet/restore')}
+		>
+			Restore Wallet
 		</Button>
 	</div>
 </form>

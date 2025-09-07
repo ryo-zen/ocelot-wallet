@@ -8,6 +8,7 @@
 	import { Input } from "$lib/components/ui/input/index.js";
 	import { Label } from "$lib/components/ui/label/index.js";
 	import { authStore } from "$lib/stores/auth.js";
+	import { databaseService } from "$lib/services/database.js";
 	import { onMount } from "svelte";
 	import { goto } from "$app/navigation";
 
@@ -15,8 +16,6 @@
 	let amount = '';
 	let message = '';
 	let category = '';
-	let referenceId = '';
-	let tags = '';
 	let isPrivate = false;
 	let isLoading = false;
 	let error = '';
@@ -46,24 +45,13 @@
 		if (!sessionRefreshed) return;
 		
 		const credentials = authStore.getCredentials();
-		if (!credentials.wallet || !credentials.password) return;
+		if (!credentials.wallet) return;
 
 		try {
-			const response = await fetch('http://127.0.0.1:8081/ws', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					command: 'balance',
-					wallet: credentials.wallet,
-					password: credentials.password
-				})
-			});
-			
-			const result = await response.json();
-			if (result.success) {
-				currentBalance = result.balance || '0';
-				authStore.refreshSession();
-			}
+			// Use database service for balance
+			const result = await databaseService.getWalletBalance(credentials.wallet);
+			currentBalance = result.balance.toString();
+			authStore.refreshSession();
 		} catch (err) {
 			console.error('Failed to get balance:', err);
 		}
@@ -124,8 +112,7 @@
 		try {
 			// First save L2 enhancement data if provided
 			let tempId = null;
-			if (message || category || referenceId || tags) {
-				const tagArray = tags.split(',').map(t => t.trim()).filter(t => t.length > 0);
+			if (message || category) {
 				
 				// Get sender address for L2 data
 				let senderAddress = credentials.wallet;
@@ -156,8 +143,6 @@
 						recipient: recipient.trim(),
 						message: message.trim() || null,
 						category: category || null,
-						reference_id: referenceId.trim() || null,
-						tags: tagArray,
 						is_private: isPrivate
 					})
 				});
@@ -196,8 +181,6 @@
 				amount = '';
 				message = '';
 				category = '';
-				referenceId = '';
-				tags = '';
 				isPrivate = false;
 				// Refresh balance
 				setTimeout(() => getBalance(), 2000);
@@ -239,7 +222,7 @@
 			<Card.Root>
 				<Card.Header>
 					<Card.Title>Send ZEI</Card.Title>
-					<Card.Description>Send ZEI with optional message enhancement functionality. Current balance: {currentBalance} ZEI</Card.Description>
+					<Card.Description>Send ZEI with optional message. Current balance: {currentBalance} ZEI</Card.Description>
 				</Card.Header>
 				<Card.Content class="space-y-6">
 					{#if error}
@@ -272,8 +255,9 @@
 								type="number"
 								bind:value={amount}
 								placeholder="1.0"
-								step="0.00000001"
+								step="0.01"
 								min="0"
+								style="color-scheme: light dark;"
 							/>
 						</div>
 					</div>
@@ -301,26 +285,8 @@
 								{/each}
 							</select>
 						</div>
-						<div class="space-y-2">
-							<Label for="referenceId">Reference ID</Label>
-							<Input
-								id="referenceId"
-								type="text"
-								bind:value={referenceId}
-								placeholder="INV-2024-001"
-							/>
-						</div>
 					</div>
 
-					<div class="space-y-2">
-						<Label for="tags">Tags (comma-separated)</Label>
-						<Input
-							id="tags"
-							type="text"
-							bind:value={tags}
-							placeholder="urgent, q4-2024, accounting"
-						/>
-					</div>
 
 					<div class="flex items-center space-x-2">
 						<input

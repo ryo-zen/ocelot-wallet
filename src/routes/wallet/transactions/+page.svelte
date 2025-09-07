@@ -8,6 +8,7 @@
 	import * as Select from "$lib/components/ui/select/index.js";
 	import { Skeleton } from "$lib/components/ui/skeleton/index.js";
 	import { authStore } from '$lib/stores/auth.js';
+	import { databaseService } from '$lib/services/database.js';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 
@@ -24,8 +25,6 @@
 		timestamp?: string;
 		message?: string;
 		category?: string;
-		tags?: string[];
-		reference_id?: string;
 		confirmations?: number;
 	}
 
@@ -63,10 +62,58 @@
 		return (amount / 100000000).toFixed(8);
 	}
 
-	function formatDate(timestamp?: string): string {
+	function formatDate(timestamp?: string | number): string {
 		if (!timestamp) return 'Unknown Time';
 		try {
-			return new Date(timestamp).toLocaleString('en-GB', {
+			let date: Date;
+			
+			// Handle different timestamp formats
+			if (typeof timestamp === 'number') {
+				// Handle PostgreSQL microsecond timestamps (e.g., 1756960992000000)
+				if (timestamp > 1000000000000000) {
+					// Microseconds - divide by 1000 to get milliseconds
+					date = new Date(timestamp / 1000);
+				} else if (timestamp > 1000000000000) {
+					// Milliseconds
+					date = new Date(timestamp);
+				} else if (timestamp > 1000000000) {
+					// Seconds - multiply by 1000
+					date = new Date(timestamp * 1000);
+				} else {
+					// Very small number, likely invalid
+					return 'Unknown Time';
+				}
+			} else if (typeof timestamp === 'string') {
+				// Handle numeric strings
+				const numericTimestamp = Number(timestamp);
+				if (!isNaN(numericTimestamp)) {
+					if (numericTimestamp > 1000000000000000) {
+						// Microseconds
+						date = new Date(numericTimestamp / 1000);
+					} else if (numericTimestamp > 1000000000000) {
+						// Milliseconds
+						date = new Date(numericTimestamp);
+					} else if (numericTimestamp > 1000000000) {
+						// Seconds
+						date = new Date(numericTimestamp * 1000);
+					} else {
+						return 'Unknown Time';
+					}
+				} else {
+					// ISO string or other date format
+					date = new Date(timestamp);
+				}
+			} else {
+				return 'Unknown Time';
+			}
+			
+			// Check if the date is valid
+			if (isNaN(date.getTime())) {
+				console.warn('Invalid timestamp:', timestamp);
+				return 'Invalid Date';
+			}
+			
+			return date.toLocaleString('en-GB', {
 				timeZone: 'UTC',
 				year: 'numeric',
 				month: '2-digit',
@@ -74,7 +121,8 @@
 				hour: '2-digit',
 				minute: '2-digit'
 			}) + ' UTC';
-		} catch {
+		} catch (error) {
+			console.warn('Error formatting timestamp:', timestamp, error);
 			return 'Invalid Date';
 		}
 	}
@@ -95,31 +143,14 @@
 				throw new Error('Authentication expired');
 			}
 
-			// Get user's address first
+			// Get user's address from database service
 			let userAddress = wallet;
 			currentAddress = userAddress;
 			try {
-				const addressResponse = await fetch('http://127.0.0.1:8081/ws', {
-					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json',
-					},
-					body: JSON.stringify({
-						command: 'address',
-						wallet: wallet,
-						password: password
-					})
-				});
-				
-				if (addressResponse.ok) {
-					const addressResult = await addressResponse.json();
-					if (addressResult.success && addressResult.address) {
-						userAddress = addressResult.address;
-						currentAddress = userAddress;
-					}
-				}
+				userAddress = await databaseService.getWalletAddress(wallet);
+				currentAddress = userAddress;
 			} catch (e) {
-				console.log('Could not get user address, using wallet name');
+				console.log('Could not get user address from database, using wallet name');
 			}
 
 			// API filtering is completely broken, so fetch all and filter client-side
