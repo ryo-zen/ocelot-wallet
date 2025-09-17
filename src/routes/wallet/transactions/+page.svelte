@@ -153,16 +153,14 @@
 				console.log('Could not get user address from database, using wallet name');
 			}
 
-			// API filtering is completely broken, so fetch all and filter client-side
-			
-			const response = await fetch('http://localhost:8080/api/transactions/enhanced');
+			// Fetch transactions directly from database for the user's address
+
+			const response = await fetch(`/api/transactions/${userAddress}`);
 			const result = await response.json();
 
 			if (response.ok && result.transactions) {
-				// Filter client-side for transactions where user is sender OR recipient
-				let filteredTransactions = result.transactions.filter((tx: Transaction) => 
-					tx.sender === userAddress || tx.recipient === userAddress
-				);
+				// Transactions are already filtered by address on the server side
+				let filteredTransactions = result.transactions;
 
 				// Apply status filter
 				if (statusFilter.length > 0) {

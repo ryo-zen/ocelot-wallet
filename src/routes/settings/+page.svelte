@@ -108,7 +108,7 @@
 						<div class="flex items-center justify-between py-2">
 							<div>
 								<p class="font-medium">L2 API</p>
-								<p class="text-sm text-muted-foreground">http://localhost:8080/api/l2</p>
+								<p class="text-sm text-muted-foreground">http://209.38.31.77:8080/api/l2</p>
 							</div>
 							<div class="text-sm text-green-600">Connected</div>
 						</div>

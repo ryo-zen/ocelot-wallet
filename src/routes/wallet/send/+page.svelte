@@ -135,7 +135,7 @@
 					console.log('Could not get sender address, using wallet name');
 				}
 
-				const l2Response = await fetch('http://localhost:8080/api/l2/enhancements', {
+				const l2Response = await fetch('http://209.38.31.77:8080/api/l2/enhancements', {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
 					body: JSON.stringify({
@@ -152,7 +152,7 @@
 					tempId = l2Result.temp_id;
 					
 					// Update to pending status
-					await fetch(`http://localhost:8080/api/l2/enhancements/${tempId}/pending`, {
+					await fetch(`http://209.38.31.77:8080/api/l2/enhancements/${tempId}/pending`, {
 						method: 'PUT',
 						headers: { 'Content-Type': 'application/json' }
 					});
