@@ -7,6 +7,7 @@
 	import { cn, type WithElementRef } from "$lib/utils.js";
 	import { goto } from '$app/navigation';
 	import { authStore } from '$lib/stores/auth.js';
+	import { walletRegistrationService } from '$lib/services/wallet-registration.js';
 	import type { HTMLFormAttributes } from "svelte/elements";
 
 	let {
@@ -147,13 +148,28 @@
 		
 		try {
 			await validateWallet(selectedWallet, password);
-			
+
 			// Store credentials in auth store
 			authStore.login(selectedWallet, password);
-			
+
+			// Auto-register wallet in database if not already registered
+			try {
+				const registrationResult = await walletRegistrationService.registerCurrentWalletIfNeeded();
+				if (registrationResult) {
+					if (registrationResult.success) {
+						console.log(`Auto-registered wallet ${selectedWallet} with address: ${registrationResult.address}`);
+					} else {
+						console.warn(`Auto-registration failed: ${registrationResult.error}`);
+					}
+				}
+			} catch (regError) {
+				// Don't fail login if registration fails
+				console.warn('Wallet auto-registration failed:', regError);
+			}
+
 			// Clear password from form
 			password = '';
-			
+
 			// Navigate to main wallet interface
 			await goto('/wallet/dashboard');
 		} catch (error) {

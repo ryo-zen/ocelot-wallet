@@ -73,12 +73,12 @@ export const GET: RequestHandler = async ({ params }) => {
 		// Transform the data to match the expected format
 		const transactions = result.map((row: any) => ({
 			hash: row.hash,
-			block_timestamp: row.block_timestamp,
+			timestamp: row.block_timestamp, // Map block_timestamp to timestamp for frontend
 			block_height: parseInt(row.block_height) || 0,
 			sender: row.sender,
 			recipient: row.recipient,
-			amount: row.amount ? BigInt(row.amount).toString() : '0',
-			fee: row.fee ? BigInt(row.fee).toString() : '0',
+			amount: parseInt(row.amount) || 0,
+			fee: parseInt(row.fee) || 0,
 			nonce: row.nonce ? BigInt(row.nonce).toString() : '0',
 			message: row.l2_message || row.base_message || null,
 			// L2 enhancement fields

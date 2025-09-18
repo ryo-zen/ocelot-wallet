@@ -65,19 +65,47 @@ export class DatabaseService {
 
       if (!response.ok) {
         if (response.status === 404) {
-          throw new Error(`Account not found: ${address}`);
+          // Account not found - return default zero balance account
+          return {
+            address: address,
+            balance: BigInt(0),
+            nonce: BigInt(0),
+            first_seen_block: undefined,
+            last_active_block: undefined,
+            last_active_time: undefined,
+            tx_count: 0,
+            total_received: BigInt(0),
+            total_sent: BigInt(0),
+            updated_at: new Date()
+          };
         }
         throw new Error(`Database API error: ${response.status}`);
       }
 
       const data = await response.json();
-      
+
       if (!data.success) {
         throw new Error(data.error || 'Failed to query database');
       }
 
       return data.account;
     } catch (error) {
+      // If it's a 404 (account not found), we already handled it above
+      if (error instanceof Error && error.message.includes('Account not found')) {
+        // This shouldn't happen anymore since we handle 404 above, but just in case
+        return {
+          address: address,
+          balance: BigInt(0),
+          nonce: BigInt(0),
+          first_seen_block: undefined,
+          last_active_block: undefined,
+          last_active_time: undefined,
+          tx_count: 0,
+          total_received: BigInt(0),
+          total_sent: BigInt(0),
+          updated_at: new Date()
+        };
+      }
       throw new Error(`Failed to fetch account data for ${address}: ${error instanceof Error ? error.message : String(error)}`);
     }
   }

@@ -64,6 +64,10 @@
 
 	function formatDate(timestamp?: string | number): string {
 		if (!timestamp) return 'Unknown Time';
+
+		// Debug logging to see what we're getting
+		console.log('formatDate received timestamp:', timestamp, typeof timestamp);
+
 		try {
 			let date: Date;
 			

@@ -1,40 +1,41 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { queryDatabase } from '$lib/server/database.js';
+import { queryDatabaseWithFields } from '$lib/server/database.js';
 
 export const GET: RequestHandler = async () => {
 	try {
-		// Query the database to get wallet addresses - optimized for speed
-		const result = await queryDatabase(
-			`SELECT address FROM accounts WHERE balance != 0 ORDER BY balance DESC LIMIT 10`
+		// Query the wallets table directly to get wallet name to address mappings
+		const result = await queryDatabaseWithFields(
+			`SELECT wallet_name, address FROM wallets WHERE is_active = true ORDER BY wallet_name`
 		);
 
-		// Create a mapping of likely wallet names to addresses based on patterns or balance
+		// Parse the results and build wallet mappings
 		const walletMappings: Record<string, string> = {};
-		
-		// For now, we'll use a simple approach - map known addresses to wallet names
-		// This could be enhanced by storing wallet names in the database or using other heuristics
-		const knownWalletAddresses = {
-			'tzei1qpt7k46yp9n8vlwx7mys92mplvsaj3hfsy5lrppw': 'sam'
-		};
 
-		// Build the reverse mapping (wallet name -> address)
-		for (const account of result) {
-			const walletName = knownWalletAddresses[account.address];
-			if (walletName) {
-				walletMappings[walletName] = account.address;
+		for (const line of result) {
+			const fields = line.split('|');
+			if (fields.length >= 2) {
+				const walletName = fields[0];
+				const address = fields[1];
+				if (walletName && address) {
+					walletMappings[walletName] = address;
+				}
 			}
 		}
 
 		return json({
 			success: true,
-			walletAddresses: walletMappings
+			walletAddresses: walletMappings,
+			totalWallets: Object.keys(walletMappings).length
 		});
 
 	} catch (error) {
 		console.error('Wallet address mapping error:', error);
 		return json(
-			{ error: 'Failed to get wallet addresses' },
+			{
+				error: 'Failed to get wallet addresses',
+				details: error instanceof Error ? error.message : 'Unknown error'
+			},
 			{ status: 500 }
 		);
 	}

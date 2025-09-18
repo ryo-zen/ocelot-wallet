@@ -6,6 +6,7 @@
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { walletCreationStore, type WalletCreationState } from '$lib/stores/wallet-creation.js';
 	import { validateWalletCreationStep, getStepNumber, TOTAL_STEPS } from '$lib/utils/route-guards.js';
+	import { walletRegistrationService } from '$lib/services/wallet-registration.js';
 
 	let password = $state('');
 	let confirmPassword = $state('');
@@ -101,13 +102,28 @@
 		try {
 			// Store password in wallet creation store
 			walletCreationStore.setPassword(password);
-			
+
 			// Create the wallet
 			const walletData = await createWallet(storeState.walletName, password);
-			
+
 			// Store wallet creation result
 			walletCreationStore.setWalletCreated(walletData.mnemonic, walletData.firstAddress);
-			
+
+			// Automatically register wallet in database
+			console.log('Registering wallet in database...');
+			const registrationResult = await walletRegistrationService.registerNewWallet(
+				storeState.walletName,
+				password,
+				undefined // wallet file path will be auto-detected
+			);
+
+			if (registrationResult.success) {
+				console.log(`Wallet ${storeState.walletName} registered successfully with address: ${registrationResult.address}`);
+			} else {
+				console.warn(`Wallet registration failed: ${registrationResult.error}`);
+				// Don't fail wallet creation if registration fails - just log warning
+			}
+
 			// Navigate to recovery phrase screen
 			await goto('/wallet/create/recovery');
 			

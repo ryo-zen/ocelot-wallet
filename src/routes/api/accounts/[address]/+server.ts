@@ -27,7 +27,23 @@ export const GET: RequestHandler = async ({ params }) => {
 		});
 
 		if (result.length === 0) {
-			return json({ error: 'Account not found' }, { status: 404 });
+			// Account not found in database - return zero balance account
+			// This is normal for new wallets that haven't received any transactions yet
+			return json({
+				success: true,
+				account: {
+					address: address,
+					balance: '0',
+					nonce: '0',
+					tx_count: 0,
+					total_received: '0',
+					total_sent: '0',
+					first_seen_block: null,
+					last_active_block: null,
+					last_active_time: null,
+					updated_at: new Date().toISOString()
+				}
+			});
 		}
 
 		const account = result[0];
