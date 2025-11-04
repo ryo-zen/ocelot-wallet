@@ -35,3 +35,4 @@ wallet-creation-flow.md
 wallet-restore-implementation-plan.md
 /docs
 .env.example
+/workflows
