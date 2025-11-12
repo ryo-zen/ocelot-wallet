@@ -5,8 +5,10 @@
 	import * as Sidebar from "$lib/components/ui/sidebar/index.js";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import { onMount } from 'svelte';
+	import { get } from 'svelte/store';
 	import { authStore } from '$lib/stores/auth.js';
-	import { databaseService } from '$lib/services/database.js';
+	import { tauriWalletAPI } from '$lib/services/tauri-wallet-api.js';
+	import { serverConfigStore } from '$lib/stores/server-config.js';
 
 	let currentWallet = $state('');
 	let currentBalance = $state('');
@@ -15,55 +17,69 @@
 	let errorMessage = $state('');
 
 	async function fetchBalance() {
-		isLoading = true;
 		errorMessage = '';
-		
+
 		// First, try to refresh the session
 		const sessionRefreshed = authStore.refreshSession();
 		if (!sessionRefreshed) {
 			errorMessage = 'Session expired - please log in again';
-			isLoading = false;
 			setTimeout(() => {
-				window.location.href = '/login-02';
+				window.location.href = '/login';
 			}, 3000);
 			return;
 		}
-		
+
 		// Get credentials after refreshing session
 		const authState = authStore.getCredentials();
 		if (!authState.isAuthenticated || !authState.wallet) {
 			errorMessage = 'Authentication required - please log in again';
-			isLoading = false;
 			setTimeout(() => {
-				window.location.href = '/login-02';
+				window.location.href = '/login';
 			}, 3000);
 			return;
 		}
-		
+
+		isLoading = true;
+
 		try {
-			// Use database service for both address lookup and balance query
-			const result = await databaseService.getWalletBalance(authState.wallet);
-			
-			// Format balance with proper decimal places for ZEI
-			currentBalance = result.balance.toLocaleString('en-US', {
-				minimumFractionDigits: 2,
-				maximumFractionDigits: 8
-			});
-			
-			currentWallet = authState.wallet;
-			walletAddress = result.address;
-			// Clear any previous error messages on success
-			errorMessage = '';
-			
-		} catch (error) {
-			console.error('Balance fetch error:', error);
-			if (error instanceof Error) {
-				errorMessage = error.message;
-				currentBalance = 'Error';
+			// Get wallet address from auth store (stored during login)
+			const storeState = get(authStore);
+			const address = storeState.address;
+
+			if (!address) {
+				throw new Error('Wallet address not found in session');
+			}
+
+			// Get RPC URL from server config
+			const rpcUrl = serverConfigStore.getCurrentRpcUrl();
+
+			// Fetch balance via Tauri
+			const response = await tauriWalletAPI.getBalance(address, rpcUrl);
+
+			if (tauriWalletAPI.isSuccess(response)) {
+				const data = tauriWalletAPI.unwrap(response);
+
+				// Convert from base units to ZEI (1 ZEI = 100,000,000 base units, like Bitcoin satoshis)
+				const balanceNum = parseFloat(data.balance) / 100_000_000;
+				const formattedBalance = balanceNum.toLocaleString('en-US', {
+					minimumFractionDigits: 2,
+					maximumFractionDigits: 8
+				});
+
+				currentWallet = authState.wallet;
+				currentBalance = formattedBalance;
+				walletAddress = address;
+				errorMessage = '';
 			} else {
-				errorMessage = 'Failed to fetch balance from database';
+				errorMessage = response.error || 'Failed to fetch balance';
 				currentBalance = 'Error';
 			}
+
+		} catch (error) {
+			console.error('Balance fetch error:', error);
+			const err = error instanceof Error ? error.message : String(error);
+			errorMessage = `Failed to fetch balance: ${err}`;
+			currentBalance = 'Error';
 		} finally {
 			isLoading = false;
 		}
@@ -110,13 +126,13 @@
 						{/if}
 					</Button>
 				</div>
-				
+
 				{#if errorMessage}
 					<div class="bg-red-50 border border-red-200 rounded-xl p-4 text-red-800 font-medium mb-4">
 						{errorMessage}
 					</div>
 				{/if}
-				
+
 				<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 					<div class="space-y-4">
 						<div class="space-y-1">

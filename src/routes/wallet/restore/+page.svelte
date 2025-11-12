@@ -4,8 +4,8 @@
 	import { Input } from "$lib/components/ui/input/index.js";
 	import { Button } from "$lib/components/ui/button/index.js";
 	import MnemonicInput from '$lib/components/mnemonic-input.svelte';
-	import { authStore } from '$lib/stores/auth.js';
-	
+	import { tauriWalletAPI } from '$lib/services/tauri-wallet-api.js';
+
 	let mnemonicWords = Array(12).fill('');
 	let walletName = '';
 	let password = '';
@@ -13,110 +13,79 @@
 	let isLoading = false;
 	let errorMessage = '';
 	let successMessage = '';
-	
-	// Restore wallet function
-	async function restoreWalletFromSeed(name: string, mnemonic: string, password: string): Promise<{ success: boolean; error?: string; message?: string }> {
-		try {
-			const response = await fetch('http://127.0.0.1:8081/ws', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					command: 'wallet_restore',
-					wallet_name: name,
-					mnemonic: mnemonic,
-					password: password
-				})
-			});
 
-			if (!response.ok) {
-				throw new Error(`HTTP error! status: ${response.status}`);
-			}
-
-			const result = await response.json();
-			return result;
-		} catch (error) {
-			throw error;
-		}
-	}
-	
 	// Form validation
 	function validateForm(): string | null {
 		if (!walletName.trim()) {
 			return 'Please enter a wallet name';
 		}
-		
+
 		if (walletName.trim().length < 2) {
 			return 'Wallet name must be at least 2 characters';
 		}
-		
+
 		const validWords = mnemonicWords.filter(word => word.trim().length > 0);
 		if (validWords.length !== 12) {
 			return 'Please enter all 12 mnemonic words';
 		}
-		
+
 		if (!password) {
 			return 'Please enter a password';
 		}
-		
-		if (password.length < 6) {
-			return 'Password must be at least 6 characters';
+
+		if (password.length < 8) {
+			return 'Password must be at least 8 characters';
 		}
-		
+
 		if (password !== confirmPassword) {
 			return 'Passwords do not match';
 		}
-		
+
 		return null;
 	}
-	
+
 	// Handle form submission
 	async function handleRestore(event: Event) {
 		event.preventDefault();
-		
+
 		const validation = validateForm();
 		if (validation) {
 			errorMessage = validation;
 			return;
 		}
-		
+
 		isLoading = true;
 		errorMessage = '';
 		successMessage = '';
-		
+
 		try {
 			const mnemonic = mnemonicWords.join(' ').toLowerCase();
-			const result = await restoreWalletFromSeed(walletName.trim(), mnemonic, password);
-			
-			if (result.success) {
+			const response = await tauriWalletAPI.restoreWallet(walletName.trim(), mnemonic, password);
+
+			if (tauriWalletAPI.isSuccess(response)) {
+				const data = tauriWalletAPI.unwrap(response);
 				successMessage = `Wallet "${walletName}" restored successfully!`;
-				
+
 				// Clear sensitive data
 				mnemonicWords = Array(12).fill('');
 				password = '';
 				confirmPassword = '';
-				
+
 				// Redirect to login after short delay
 				setTimeout(() => {
-					goto('/login-02');
+					goto('/login');
 				}, 2000);
 			} else {
-				errorMessage = result.error || 'Wallet restoration failed';
+				errorMessage = response.error || 'Wallet restoration failed';
 			}
 		} catch (error) {
-			if (error instanceof Error) {
-				if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
-					errorMessage = 'Unable to connect to wallet service. Please ensure the CLI Bridge is running.';
-				} else {
-					errorMessage = `Restoration failed: ${error.message}`;
-				}
-			} else {
-				errorMessage = 'An unexpected error occurred during restoration';
-			}
+			const err = error instanceof Error ? error.message : String(error);
+			errorMessage = `Restoration failed: ${err}`;
 		} finally {
 			isLoading = false;
 		}
 	}
-	
+
 	// Clear form
 	function clearForm() {
 		mnemonicWords = Array(12).fill('');
@@ -142,7 +111,7 @@
 					Enter your 12-word seed phrase to restore your wallet
 				</p>
 			</div>
-			
+
 			<!-- Mnemonic Input Section -->
 			<div class="bg-card border rounded-xl p-6">
 				<div class="space-y-4">
@@ -155,16 +124,16 @@
 					<MnemonicInput bind:words={mnemonicWords} disabled={isLoading} />
 				</div>
 			</div>
-			
+
 			<!-- Wallet Details Section -->
 			<div class="bg-card border rounded-xl p-6">
 				<div class="space-y-6">
 					<h2 class="text-lg font-semibold">Wallet Details</h2>
-					
+
 					<div class="grid gap-6">
 						<div class="space-y-2">
 							<Label for="walletName">Wallet Name</Label>
-							<Input 
+							<Input
 								id="walletName"
 								type="text"
 								bind:value={walletName}
@@ -173,22 +142,22 @@
 								required
 							/>
 						</div>
-						
+
 						<div class="space-y-2">
 							<Label for="password">Password</Label>
-							<Input 
+							<Input
 								id="password"
 								type="password"
 								bind:value={password}
-								placeholder="Enter password"
+								placeholder="Enter password (min 8 characters)"
 								disabled={isLoading}
 								required
 							/>
 						</div>
-						
+
 						<div class="space-y-2">
 							<Label for="confirmPassword">Confirm Password</Label>
-							<Input 
+							<Input
 								id="confirmPassword"
 								type="password"
 								bind:value={confirmPassword}
@@ -200,43 +169,43 @@
 					</div>
 				</div>
 			</div>
-			
+
 			<!-- Messages -->
 			{#if errorMessage}
 				<div class="bg-red-50 border border-red-200 rounded-xl p-4 text-red-800 font-medium">
 					{errorMessage}
 				</div>
 			{/if}
-			
+
 			{#if successMessage}
 				<div class="bg-green-50 border border-green-200 rounded-xl p-4 text-green-800 font-medium">
 					{successMessage}
 				</div>
 			{/if}
-			
+
 			<!-- Actions -->
 			<div class="flex gap-4">
-				<Button 
-					type="button" 
-					variant="outline" 
+				<Button
+					type="button"
+					variant="outline"
 					class="flex-1"
-					onclick={() => goto('/login-02')}
+					onclick={() => goto('/login')}
 					disabled={isLoading}
 				>
 					Back to Login
 				</Button>
-				
-				<Button 
-					type="button" 
-					variant="outline" 
+
+				<Button
+					type="button"
+					variant="outline"
 					onclick={clearForm}
 					disabled={isLoading}
 				>
 					Clear Form
 				</Button>
-				
-				<Button 
-					type="submit" 
+
+				<Button
+					type="submit"
 					class="flex-1"
 					disabled={isLoading}
 				>

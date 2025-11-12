@@ -6,22 +6,23 @@
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { walletCreationStore, type WalletCreationState } from '$lib/stores/wallet-creation.js';
 	import { validateWalletCreationStep, getStepNumber, TOTAL_STEPS } from '$lib/utils/route-guards.js';
+	import { tauriWalletAPI } from '$lib/services/tauri-wallet-api.js';
 
 	let walletName = $state('');
 	let error = $state('');
 	let isLoading = $state(false);
-	
+
 	// Subscribe to store state
 	let storeState = $state<WalletCreationState | null>(null);
 
 	onMount(() => {
 		// Initialize wallet creation flow
 		walletCreationStore.startFlow();
-		
+
 		// Subscribe to store changes
 		const unsubscribe = walletCreationStore.subscribe(state => {
 			storeState = state;
-			
+
 			// Validate route access only when we have state
 			if (storeState && !validateWalletCreationStep('name', storeState)) {
 				return; // Route guard will handle redirect
@@ -31,86 +32,70 @@
 		return unsubscribe;
 	});
 
-	// Check if wallet name already exists
+	// Check if wallet name already exists using Tauri
 	async function checkWalletExists(name: string): Promise<boolean> {
 		try {
-			const response = await fetch('http://127.0.0.1:8081/ws', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-				},
-				body: JSON.stringify({
-					command: 'wallet_list'
-				})
-			});
+			const response = await tauriWalletAPI.listWallets();
 
-			if (!response.ok) {
-				throw new Error(`HTTP error! status: ${response.status}`);
+			if (!tauriWalletAPI.isSuccess(response)) {
+				throw new Error(response.error || 'Failed to list wallets');
 			}
 
-			const result = await response.json();
-			
-			if (!result.success) {
-				throw new Error(result.error || 'Failed to list wallets');
-			}
-			
+			const data = tauriWalletAPI.unwrap(response);
+
 			// Check if wallet name exists (case-sensitive)
-			return result.wallets.includes(name);
-		} catch (fetchError) {
-			console.error('Wallet list check failed:', fetchError);
+			return data.wallets.includes(name);
+		} catch (err) {
+			console.error('Wallet list check failed:', err);
 			throw new Error('Unable to check wallet names. Please try again.');
 		}
 	}
 
 	async function handleNext() {
 		error = '';
-		
+
 		// Validate wallet name
 		const trimmedName = walletName.trim();
 		if (!trimmedName) {
 			error = 'Please enter a wallet name';
 			return;
 		}
-		
+
 		if (trimmedName.length < 3) {
 			error = 'Wallet name must be at least 3 characters long';
 			return;
 		}
-		
+
 		if (trimmedName.length > 50) {
 			error = 'Wallet name must be less than 50 characters long';
 			return;
 		}
-		
+
 		// Check for valid characters (alphanumeric, underscore, hyphen)
 		if (!/^[a-zA-Z0-9_-]+$/.test(trimmedName)) {
 			error = 'Wallet name can only contain letters, numbers, underscore, and hyphen';
 			return;
 		}
-		
+
 		isLoading = true;
 		walletCreationStore.setLoading(true);
-		
+
 		try {
 			// Check for duplicate wallet name
 			const exists = await checkWalletExists(trimmedName);
-			
+
 			if (exists) {
 				error = 'Wallet name already exists. Please choose a different name.';
 				return;
 			}
-			
+
 			// Store wallet name and proceed
 			walletCreationStore.setWalletName(trimmedName);
 			await goto('/wallet/create/password');
-			
+
 		} catch (checkError) {
 			if (checkError instanceof Error) {
-				if (checkError.message.includes('Failed to fetch') || checkError.message.includes('NetworkError')) {
-					error = 'Unable to connect to wallet service. Please ensure the CLI Bridge is running on http://localhost:8081';
-				} else {
-					error = checkError.message;
-				}
+				error = checkError.message;
 			} else {
 				error = 'An unexpected error occurred. Please try again.';
 			}
@@ -122,7 +107,7 @@
 
 	function handleBack() {
 		walletCreationStore.cleanup();
-		goto('/login-02');
+		goto('/login');
 	}
 
 	// Handle form submission
@@ -139,7 +124,7 @@
 <div class="grid min-h-svh lg:grid-cols-2">
 	<div class="flex flex-col gap-4 p-6 md:p-10">
 		<div class="flex justify-center gap-2 md:justify-start">
-			<a href="/login-02" class="flex items-center gap-2 font-medium">
+			<a href="/login" class="flex items-center gap-2 font-medium">
 				<div class="bg-primary text-primary-foreground flex size-6 items-center justify-center rounded-md">
 					🪙
 				</div>

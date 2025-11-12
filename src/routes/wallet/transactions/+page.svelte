@@ -3,133 +3,46 @@
 	import * as Breadcrumb from "$lib/components/ui/breadcrumb/index.js";
 	import { Separator } from "$lib/components/ui/separator/index.js";
 	import * as Sidebar from "$lib/components/ui/sidebar/index.js";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { Input } from "$lib/components/ui/input/index.js";
-	import * as Select from "$lib/components/ui/select/index.js";
-	import { Skeleton } from "$lib/components/ui/skeleton/index.js";
 	import { authStore } from '$lib/stores/auth.js';
-	import { databaseService } from '$lib/services/database.js';
+	import { serverConfigStore } from '$lib/stores/server-config.js';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { get } from 'svelte/store';
 
-	interface Transaction {
-		id?: string;
-		hash?: string;
-		tx_hash?: string;
-		block_height?: number;
-		amount: number;
-		fee?: number;
-		recipient: string;
-		sender?: string;
-		status: 'confirmed' | 'pending' | 'failed' | 'draft';
-		timestamp?: string;
-		message?: string;
-		category?: string;
-		confirmations?: number;
-	}
+	// Transaction components
+	import TransactionFilters from '$lib/components/transactions/TransactionFilters.svelte';
+	import TransactionCard from '$lib/components/transactions/TransactionCard.svelte';
+	import EmptyState from '$lib/components/transactions/EmptyState.svelte';
+	import LoadingState from '$lib/components/transactions/LoadingState.svelte';
+	import Pagination from '$lib/components/transactions/Pagination.svelte';
+	import { filterTransactions, type Transaction } from '$lib/components/transactions/transaction-utils.js';
 
-	let transactions: Transaction[] = [];
-	let isLoading = false;
-	let errorMessage = '';
-	let statusFilter: string[] = [];
-	let messageSearch = '';
-	let isAuthenticated = false;
-	let currentWallet = '';
-	let currentAddress = '';
+	let transactions: Transaction[] = $state([]);
+	let filteredTransactions: Transaction[] = $state([]);
+	let isLoading = $state(false);
+	let errorMessage = $state('');
+	let statusFilter: string[] = $state([]);
+	let messageSearch = $state('');
+	let isAuthenticated = $state(false);
+	let currentWallet = $state('');
+	let currentAddress = $state('');
+
+	// Pagination state
+	let total = $state(0);
+	let limit = $state(50);
+	let offset = $state(0);
 
 	// Subscribe to auth store
 	authStore.subscribe(state => {
 		isAuthenticated = state.isAuthenticated;
 		currentWallet = state.wallet || '';
+		currentAddress = state.address || '';
 	});
 
-	function getStatusBadgeClass(status?: string): string {
-		switch (status?.toLowerCase()) {
-			case 'confirmed':
-				return 'bg-transparent text-foreground border-primary';
-			case 'pending':
-				return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-			case 'failed':
-				return 'bg-red-100 text-red-800 border-red-200';
-			case 'draft':
-				return 'bg-gray-100 text-gray-800 border-gray-200';
-			default:
-				return 'bg-transparent text-foreground border-primary'; // Default to confirmed for transactions
-		}
-	}
-
-	function formatAmount(amount: number): string {
-		return (amount / 100000000).toFixed(8);
-	}
-
-	function formatDate(timestamp?: string | number): string {
-		if (!timestamp) return 'Unknown Time';
-
-		// Debug logging to see what we're getting
-		console.log('formatDate received timestamp:', timestamp, typeof timestamp);
-
-		try {
-			let date: Date;
-			
-			// Handle different timestamp formats
-			if (typeof timestamp === 'number') {
-				// Handle PostgreSQL microsecond timestamps (e.g., 1756960992000000)
-				if (timestamp > 1000000000000000) {
-					// Microseconds - divide by 1000 to get milliseconds
-					date = new Date(timestamp / 1000);
-				} else if (timestamp > 1000000000000) {
-					// Milliseconds
-					date = new Date(timestamp);
-				} else if (timestamp > 1000000000) {
-					// Seconds - multiply by 1000
-					date = new Date(timestamp * 1000);
-				} else {
-					// Very small number, likely invalid
-					return 'Unknown Time';
-				}
-			} else if (typeof timestamp === 'string') {
-				// Handle numeric strings
-				const numericTimestamp = Number(timestamp);
-				if (!isNaN(numericTimestamp)) {
-					if (numericTimestamp > 1000000000000000) {
-						// Microseconds
-						date = new Date(numericTimestamp / 1000);
-					} else if (numericTimestamp > 1000000000000) {
-						// Milliseconds
-						date = new Date(numericTimestamp);
-					} else if (numericTimestamp > 1000000000) {
-						// Seconds
-						date = new Date(numericTimestamp * 1000);
-					} else {
-						return 'Unknown Time';
-					}
-				} else {
-					// ISO string or other date format
-					date = new Date(timestamp);
-				}
-			} else {
-				return 'Unknown Time';
-			}
-			
-			// Check if the date is valid
-			if (isNaN(date.getTime())) {
-				console.warn('Invalid timestamp:', timestamp);
-				return 'Invalid Date';
-			}
-			
-			return date.toLocaleString('en-GB', {
-				timeZone: 'UTC',
-				year: 'numeric',
-				month: '2-digit',
-				day: '2-digit',
-				hour: '2-digit',
-				minute: '2-digit'
-			}) + ' UTC';
-		} catch (error) {
-			console.warn('Error formatting timestamp:', timestamp, error);
-			return 'Invalid Date';
-		}
-	}
+	// Apply filters reactively
+	$effect(() => {
+		filteredTransactions = filterTransactions(transactions, statusFilter, messageSearch);
+	});
 
 	async function loadTransactions() {
 		if (!isAuthenticated) {
@@ -147,52 +60,49 @@
 				throw new Error('Authentication expired');
 			}
 
-			// Get user's address from database service
-			let userAddress = wallet;
+			// Get user's address from auth store (set during login)
+			const storeState = get(authStore);
+			const userAddress = storeState.address;
+
+			if (!userAddress) {
+				throw new Error('Wallet address not found in session');
+			}
+
 			currentAddress = userAddress;
-			try {
-				userAddress = await databaseService.getWalletAddress(wallet);
-				currentAddress = userAddress;
-			} catch (e) {
-				console.log('Could not get user address from database, using wallet name');
-			}
 
-			// Fetch transactions directly from database for the user's address
+			// Get API URL from server config
+			const apiUrl = serverConfigStore.getCurrentServerUrl();
 
-			const response = await fetch(`/api/transactions/${userAddress}`);
-			const result = await response.json();
+			// Fetch transactions via Tauri API
+			const { tauriWalletAPI } = await import('$lib/services/tauri-wallet-api.js');
+			const response = await tauriWalletAPI.getTransactions(userAddress, limit, offset, apiUrl);
 
-			if (response.ok && result.transactions) {
-				// Transactions are already filtered by address on the server side
-				let filteredTransactions = result.transactions;
+			if (tauriWalletAPI.isSuccess(response)) {
+				const data = tauriWalletAPI.unwrap(response);
+				const result = JSON.parse(data.transactions_json);
 
-				// Apply status filter
-				if (statusFilter.length > 0) {
-					filteredTransactions = filteredTransactions.filter((tx: Transaction) => 
-						statusFilter.includes((tx.status || 'confirmed').toLowerCase())
-					);
+				if (result.transactions) {
+					transactions = result.transactions;
+					total = result.transactions.length || 0;
+
+					// Debug: Log first transaction to see structure
+					if (transactions.length > 0) {
+						console.log('Transaction data:', transactions[0]);
+					}
+				} else {
+					errorMessage = 'No transactions found';
 				}
-
-				// Apply message search
-				if (messageSearch) {
-					filteredTransactions = filteredTransactions.filter((tx: Transaction) => 
-						tx.message?.toLowerCase().includes(messageSearch.toLowerCase()) || false
-					);
-				}
-
-				// Sort by block height (newest first)
-				transactions = filteredTransactions.sort((a: Transaction, b: Transaction) => (b.block_height || 0) - (a.block_height || 0));
 			} else {
-				errorMessage = result.error || 'Failed to load transactions';
+				errorMessage = response.error || 'Failed to load transactions';
 			}
 
-			// Refresh session on successful API call
+			// Refresh session
 			authStore.refreshSession();
 		} catch (error) {
 			if (error instanceof Error) {
 				if (error.message.includes('Authentication expired')) {
 					authStore.logout();
-					goto('/login-02');
+					goto('/login');
 					return;
 				} else if (error.message.includes('Failed to fetch')) {
 					errorMessage = 'Unable to connect to transaction service';
@@ -214,9 +124,14 @@
 		errorMessage = '';
 	}
 
+	function handlePageChange(newOffset: number) {
+		offset = newOffset;
+		loadTransactions();
+	}
+
 	onMount(() => {
 		if (!isAuthenticated) {
-			goto('/login-02');
+			goto('/login');
 			return;
 		}
 		loadTransactions();
@@ -245,195 +160,54 @@
 				</Breadcrumb.Root>
 			</div>
 		</header>
-		<div class="flex flex-1 flex-col gap-4 p-4 pt-0">
-			<!-- Filters Section -->
-			<div class="bg-card border rounded-xl p-6">
-				<h2 class="text-2xl font-bold mb-4">Transaction History</h2>
-				
-				<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-					<div class="space-y-2">
-						<label for="status-filter" class="text-sm font-medium">Filter by Status</label>
-						<Select.Root type="multiple" value={statusFilter} onValueChange={(value: string[]) => statusFilter = value}>
-							<Select.Trigger id="status-filter">
-								{statusFilter.length > 0 ? statusFilter.join(', ') : 'All Statuses'}
-							</Select.Trigger>
-							<Select.Content>
-								<Select.Group>
-									<Select.Item value={""}>All Statuses</Select.Item>
-									<Select.Item value={"confirmed"}>Confirmed</Select.Item>
-									<Select.Item value={"pending"}>Pending</Select.Item>
-									<Select.Item value={"draft"}>Draft</Select.Item>
-									<Select.Item value={"failed"}>Failed</Select.Item>
-								</Select.Group>
-							</Select.Content>
-						</Select.Root>
-					</div>
-					
-					<div class="space-y-2">
-						<label for="message-search" class="text-sm font-medium">Search Messages</label>
-						<Input 
-							id="message-search"
-							bind:value={messageSearch} 
-							placeholder="Search in message content..."
-						/>
-					</div>
-					
-					<div class="flex items-end gap-2">
-						<Button onclick={loadTransactions} disabled={isLoading || !isAuthenticated}>
-							{#if isLoading}
-								Loading...
-							{:else if !isAuthenticated}
-								Login Required
-							{:else}
-								Load Transactions
-							{/if}
-						</Button>
-						<Button variant="outline" onclick={clearFilters}>
-							Clear Filters
-						</Button>
-					</div>
-				</div>
-			</div>
 
-			<!-- Status Messages -->
+		<div class="flex flex-1 flex-col gap-4 p-4 pt-0">
+			<!-- Filters -->
+			<TransactionFilters
+				{statusFilter}
+				{messageSearch}
+				{isLoading}
+				{isAuthenticated}
+				onLoadTransactions={loadTransactions}
+				onClearFilters={clearFilters}
+				onStatusFilterChange={(value) => statusFilter = value}
+				onMessageSearchChange={(value) => messageSearch = value}
+			/>
+
+			<!-- Error Message -->
 			{#if errorMessage}
 				<div class="bg-red-50 border border-red-200 rounded-xl p-4 text-red-800 font-medium">
 					{errorMessage}
 				</div>
 			{/if}
 
-			<!-- Loading Skeletons -->
+			<!-- Loading State -->
 			{#if isLoading}
-				<div class="space-y-4">
-					{#each Array(3) as _}
-						<div class="bg-card border rounded-xl p-6">
-							<div class="flex justify-between items-start mb-3">
-								<Skeleton class="h-5 w-32" />
-								<Skeleton class="h-6 w-20 rounded-full" />
-							</div>
-							<div class="space-y-2">
-								<Skeleton class="h-4 w-full" />
-								<Skeleton class="h-4 w-3/4" />
-								<Skeleton class="h-4 w-1/2" />
-							</div>
-						</div>
-					{/each}
-				</div>
+				<LoadingState />
 			{/if}
 
 			<!-- Transactions List -->
-			{#if !isLoading && transactions.length > 0}
+			{#if !isLoading && filteredTransactions.length > 0}
 				<div class="space-y-4">
-					{#each transactions as tx}
-						<div class="bg-card border rounded-xl p-6 hover:shadow-md transition-shadow">
-							<div class="flex justify-between items-start mb-4">
-								<div class="space-y-1">
-									<h3 class="text-lg font-bold">
-										Block #{tx.block_height || 'Pending'}
-									</h3>
-									<p class="text-muted-foreground font-medium">
-										{tx.sender === currentAddress ? 'Sent' : 'Received'} {formatAmount(tx.amount)} ZEI
-									</p>
-								</div>
-								<span class="px-3 py-1 rounded-full text-xs font-semibold border {getStatusBadgeClass(tx.status)}">
-									{(tx.status || 'CONFIRMED').toUpperCase()}
-								</span>
-							</div>
-							
-							<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-								<div class="space-y-4">
-									<div class="space-y-1">
-										<span class="text-muted-foreground font-medium text-sm">Recipient</span>
-										<p class="font-mono text-sm break-all">{tx.recipient}</p>
-									</div>
-									<div class="space-y-1">
-										<span class="text-muted-foreground font-medium text-sm">Block Height</span>
-										<p class="font-mono">{tx.block_height || 'Pending'}</p>
-									</div>
-									<div class="space-y-1">
-										<span class="text-muted-foreground font-medium text-sm">Confirmations</span>
-										<p class="font-mono">{tx.confirmations || 0}</p>
-									</div>
-								</div>
-								<div class="space-y-4">
-									<div class="space-y-1">
-										<span class="text-muted-foreground font-medium text-sm">Network Fee</span>
-										<p class="font-mono">{formatAmount(tx.fee || 5000)} ZEI</p>
-									</div>
-									<div class="space-y-1">
-										<span class="text-muted-foreground font-medium text-sm">Timestamp</span>
-										<p class="font-mono text-sm">{formatDate(tx.timestamp)}</p>
-									</div>
-									<div class="space-y-1">
-										<span class="text-muted-foreground font-medium text-sm">Hash</span>
-										<p class="font-mono text-sm break-all">{tx.hash || tx.tx_hash || 'Pending'}</p>
-									</div>
-								</div>
-							</div>
-							
-							{#if tx.message || tx.category || tx.reference_id || (tx.tags && tx.tags.length > 0)}
-								<div class="mt-6 pt-4 border-t border-border">
-									<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-										{#if tx.message}
-											<div class="space-y-1">
-												<span class="text-muted-foreground font-medium text-sm">Message</span>
-												<p class="text-sm font-medium">"{tx.message}"</p>
-											</div>
-										{/if}
-										{#if tx.category}
-											<div class="space-y-1">
-												<span class="text-muted-foreground font-medium text-sm">Category</span>
-												<p class="text-sm font-medium capitalize">{tx.category}</p>
-											</div>
-										{/if}
-										{#if tx.reference_id}
-											<div class="space-y-1">
-												<span class="text-muted-foreground font-medium text-sm">Reference ID</span>
-												<p class="text-sm font-mono">{tx.reference_id}</p>
-											</div>
-										{/if}
-										{#if tx.tags && tx.tags.length > 0}
-											<div class="space-y-1">
-												<span class="text-muted-foreground font-medium text-sm">Tags</span>
-												<div class="flex flex-wrap gap-1">
-													{#each tx.tags as tag}
-														<span class="px-2 py-1 bg-secondary text-secondary-foreground rounded text-xs font-medium">{tag}</span>
-													{/each}
-												</div>
-											</div>
-										{/if}
-									</div>
-								</div>
-							{/if}
-						</div>
+					{#each filteredTransactions as transaction}
+						<TransactionCard {transaction} {currentAddress} />
 					{/each}
 				</div>
 			{:else if !isLoading && !errorMessage}
-				<div class="bg-card border rounded-xl p-8 text-center">
-					<h3 class="text-xl font-semibold mb-2">No Transactions Found</h3>
-					<p class="text-muted-foreground mb-4">
-						{#if statusFilter.length > 0 || messageSearch}
-							No transactions match your current filters.
-						{:else}
-							You haven't made any transactions yet.
-						{/if}
-					</p>
-					{#if statusFilter.length > 0 || messageSearch}
-						<Button variant="outline" onclick={clearFilters}>
-							Clear Filters
-						</Button>
-					{/if}
-				</div>
+				<EmptyState
+					hasFilters={statusFilter.length > 0 || messageSearch.length > 0}
+					onClearFilters={clearFilters}
+				/>
 			{/if}
 
-			{#if !isLoading && transactions.length > 0}
-				<div class="bg-muted border rounded-xl p-4">
-					<div class="flex items-center justify-center">
-						<span class="text-sm font-medium text-muted-foreground">
-							Found {transactions.length} transaction{transactions.length !== 1 ? 's' : ''} for {currentWallet}
-						</span>
-					</div>
-				</div>
+			<!-- Pagination -->
+			{#if !isLoading && total > 0}
+				<Pagination
+					{total}
+					{limit}
+					{offset}
+					onPageChange={handlePageChange}
+				/>
 			{/if}
 		</div>
 	</Sidebar.Inset>

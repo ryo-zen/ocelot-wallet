@@ -3,104 +3,94 @@
 	import * as Breadcrumb from "$lib/components/ui/breadcrumb/index.js";
 	import { Separator } from "$lib/components/ui/separator/index.js";
 	import * as Sidebar from "$lib/components/ui/sidebar/index.js";
-	import * as Card from "$lib/components/ui/card/index.js";
-	import { Button } from "$lib/components/ui/button/index.js";
-	import { Input } from "$lib/components/ui/input/index.js";
-	import { Label } from "$lib/components/ui/label/index.js";
 	import { authStore } from "$lib/stores/auth.js";
-	import { databaseService } from "$lib/services/database.js";
+	import { tauriWalletAPI } from "$lib/services/tauri-wallet-api.js";
+	import { serverConfigStore } from "$lib/stores/server-config.js";
+	import { get } from "svelte/store";
 	import { onMount } from "svelte";
-	import { goto } from "$app/navigation";
 
-	let recipient = '';
-	let amount = '';
-	let message = '';
-	let category = '';
-	let isPrivate = false;
-	let isLoading = false;
-	let error = '';
-	let success = '';
+	// Send components
+	import SendForm from '$lib/components/send/SendForm.svelte';
+	import ConfirmDialog from '$lib/components/send/ConfirmDialog.svelte';
+	import { sendTransaction, validateTransaction, type TransactionData } from '$lib/components/send/send-transaction.js';
 
-	const categories = [
-		{ value: '', label: 'Select category' },
-		{ value: 'payment', label: 'Payment' },
-		{ value: 'donation', label: 'Donation' },
-		{ value: 'refund', label: 'Refund' },
-		{ value: 'salary', label: 'Salary' },
-		{ value: 'invoice', label: 'Invoice' },
-		{ value: 'other', label: 'Other' }
-	];
-
-	let showConfirmDialog = false;
-	let currentBalance = '0';
+	let recipient = $state('');
+	let amount = $state('');
+	let message = $state('');
+	let category = $state('');
+	let isPrivate = $state(false);
+	let isLoading = $state(false);
+	let error = $state('');
+	let success = $state('');
+	let showConfirmDialog = $state(false);
+	let currentBalance = $state('0');
 
 	onMount(() => {
-		// Get current balance - this will handle auth check gracefully
+		// Read URL parameters
+		const urlParams = new URLSearchParams(window.location.search);
+		const toParam = urlParams.get('to');
+		if (toParam) {
+			recipient = toParam;
+		}
+
 		getBalance();
 	});
 
 	async function getBalance() {
-		// Refresh session first
 		const sessionRefreshed = authStore.refreshSession();
 		if (!sessionRefreshed) return;
-		
+
 		const credentials = authStore.getCredentials();
 		if (!credentials.wallet) return;
 
 		try {
-			// Use database service for balance
-			const result = await databaseService.getWalletBalance(credentials.wallet);
-			currentBalance = result.balance.toString();
-			authStore.refreshSession();
+			// Get address from auth store
+			const storeState = get(authStore);
+			const address = storeState.address;
+
+			if (!address) {
+				console.error('No address in auth store');
+				return;
+			}
+
+			// Get RPC URL from server config
+			const rpcUrl = serverConfigStore.getCurrentRpcUrl();
+
+			// Fetch balance via Tauri
+			const response = await tauriWalletAPI.getBalance(address, rpcUrl);
+
+			if (tauriWalletAPI.isSuccess(response)) {
+				const data = tauriWalletAPI.unwrap(response);
+				// Convert from base units to ZEI (1 ZEI = 100,000,000 base units)
+				const balanceNum = parseFloat(data.balance) / 100_000_000;
+				currentBalance = balanceNum.toString();
+				authStore.refreshSession();
+			}
 		} catch (err) {
 			console.error('Failed to get balance:', err);
 		}
 	}
 
-	function clearMessages() {
+	function handleSend() {
+		console.log('handleSend called', { recipient, amount, currentBalance });
 		error = '';
 		success = '';
-	}
 
-	function validateForm() {
-		clearMessages();
-		
-		if (!recipient.trim()) {
-			error = 'Recipient address is required';
-			return false;
-		}
-		
-		if (!amount || parseFloat(amount) <= 0) {
-			error = 'Valid amount is required';
-			return false;
-		}
-		
-		const balance = parseFloat(currentBalance);
-		const sendAmount = parseFloat(amount);
-		
-		if (sendAmount > balance) {
-			error = 'Insufficient balance';
-			return false;
-		}
-		
-		return true;
-	}
-
-	function handleSend() {
-		console.log('handleSend called');
-		console.log('Current form values:', { recipient, amount, currentBalance });
-		if (!validateForm()) {
-			console.log('Validation failed:', error);
+		const validation = validateTransaction(recipient, amount, currentBalance);
+		console.log('Validation result:', validation);
+		if (!validation.valid) {
+			error = validation.error || 'Validation failed';
 			return;
 		}
-		console.log('Validation passed, showing dialog');
+
 		showConfirmDialog = true;
 	}
 
 	async function executeSend() {
 		showConfirmDialog = false;
 		isLoading = true;
-		clearMessages();
+		error = '';
+		success = '';
 
 		const credentials = authStore.getCredentials();
 		if (!credentials.wallet || !credentials.password) {
@@ -109,90 +99,40 @@
 			return;
 		}
 
-		try {
-			// First save L2 enhancement data if provided
-			let tempId = null;
-			if (message || category) {
-				
-				// Get sender address for L2 data
-				let senderAddress = credentials.wallet;
-				try {
-					const addressResponse = await fetch('http://127.0.0.1:8081/ws', {
-						method: 'POST',
-						headers: { 'Content-Type': 'application/json' },
-						body: JSON.stringify({
-							command: 'address',
-							wallet: credentials.wallet,
-							password: credentials.password
-						})
-					});
-					
-					const addressResult = await addressResponse.json();
-					if (addressResult.success && addressResult.address) {
-						senderAddress = addressResult.address;
-					}
-				} catch (e) {
-					console.log('Could not get sender address, using wallet name');
-				}
+		const transactionData: TransactionData = {
+			recipient,
+			amount,
+			message,
+			category,
+			isPrivate
+		};
 
-				const l2Response = await fetch('http://209.38.31.77:8080/api/l2/enhancements', {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({
-						sender: senderAddress,
-						recipient: recipient.trim(),
-						message: message.trim() || null,
-						category: category || null,
-						is_private: isPrivate
-					})
-				});
+		// Type-safe credentials (already validated above)
+		const validCredentials = {
+			wallet: credentials.wallet,
+			password: credentials.password
+		};
 
-				if (l2Response.ok) {
-					const l2Result = await l2Response.json();
-					tempId = l2Result.temp_id;
-					
-					// Update to pending status
-					await fetch(`http://209.38.31.77:8080/api/l2/enhancements/${tempId}/pending`, {
-						method: 'PUT',
-						headers: { 'Content-Type': 'application/json' }
-					});
-				}
-			}
+		const result = await sendTransaction(validCredentials, transactionData);
 
-			// Send the transaction
-			const response = await fetch('http://127.0.0.1:8081/ws', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					command: 'send',
-					wallet: credentials.wallet,
-					password: credentials.password,
-					amount: amount.toString(),
-					recipient: recipient.trim()
-				})
-			});
+		if (result.success && result.txHash) {
+			success = `Transaction sent successfully! Hash: ${result.txHash}`;
 
-			const result = await response.json();
+			// Clear form
+			recipient = '';
+			amount = '';
+			message = '';
+			category = '';
+			isPrivate = false;
 
-			if (result.success) {
-				success = `Transaction sent successfully! ${result.transaction_hash ? 'Hash: ' + result.transaction_hash : ''}`;
-				// Clear form
-				recipient = '';
-				amount = '';
-				message = '';
-				category = '';
-				isPrivate = false;
-				// Refresh balance
-				setTimeout(() => getBalance(), 2000);
-				authStore.refreshSession();
-			} else {
-				error = `Transaction failed: ${result.error}`;
-			}
-		} catch (err) {
-			error = `Transaction error: ${err instanceof Error ? err.message : String(err)}`;
-		} finally {
-			isLoading = false;
+			// Refresh balance
+			setTimeout(() => getBalance(), 2000);
+			authStore.refreshSession();
+		} else {
+			error = `Transaction error: ${result.error}`;
 		}
+
+		isLoading = false;
 	}
 </script>
 
@@ -212,148 +152,35 @@
 						</Breadcrumb.Item>
 						<Breadcrumb.Separator />
 						<Breadcrumb.Item>
-							<Breadcrumb.Page>Send</Breadcrumb.Page>
+							<Breadcrumb.Page>Send ZEI</Breadcrumb.Page>
 						</Breadcrumb.Item>
 					</Breadcrumb.List>
 				</Breadcrumb.Root>
 			</div>
 		</header>
-		<div class="flex flex-1 flex-col gap-6 p-4 pt-0">
-			<Card.Root>
-				<Card.Header>
-					<Card.Title>Send ZEI</Card.Title>
-					<Card.Description>Send ZEI with optional message. Current balance: {currentBalance} ZEI</Card.Description>
-				</Card.Header>
-				<Card.Content class="space-y-6">
-					{#if error}
-						<div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-							{error}
-						</div>
-					{/if}
-					
-					{#if success}
-						<div class="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
-							{success}
-						</div>
-					{/if}
+		<div class="flex flex-1 flex-col gap-4 p-4 pt-0">
+			<SendForm
+				bind:recipient={recipient}
+				bind:amount={amount}
+				bind:message={message}
+				bind:category={category}
+				bind:isPrivate={isPrivate}
+				{currentBalance}
+				{isLoading}
+				{error}
+				{success}
+				onSend={handleSend}
+			/>
 
-					<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-						<div class="space-y-2">
-							<Label for="recipient">Recipient Address *</Label>
-							<Input
-								id="recipient"
-								type="text"
-								bind:value={recipient}
-								placeholder="tzei1xyz..."
-								class="font-mono text-sm"
-							/>
-						</div>
-						<div class="space-y-2">
-							<Label for="amount">Amount (ZEI) *</Label>
-							<Input
-								id="amount"
-								type="number"
-								bind:value={amount}
-								placeholder="1.0"
-								step="0.01"
-								min="0"
-								style="color-scheme: light dark;"
-							/>
-						</div>
-					</div>
-
-					<div class="space-y-2">
-						<Label for="message">Message</Label>
-						<textarea
-							id="message"
-							bind:value={message}
-							placeholder="Payment for services rendered..."
-							class="w-full px-3 py-2 text-sm border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent resize-vertical min-h-[80px]"
-						></textarea>
-					</div>
-
-					<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-						<div class="space-y-2">
-							<Label for="category">Category</Label>
-							<select
-								id="category"
-								bind:value={category}
-								class="w-full px-3 py-2 text-sm border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
-							>
-								{#each categories as cat}
-									<option value={cat.value}>{cat.label}</option>
-								{/each}
-							</select>
-						</div>
-					</div>
-
-
-					<div class="flex items-center space-x-2">
-						<input
-							type="checkbox"
-							id="isPrivate"
-							bind:checked={isPrivate}
-							class="rounded"
-						/>
-						<Label for="isPrivate" class="font-normal cursor-pointer">Mark as Private</Label>
-					</div>
-				</Card.Content>
-				<Card.Footer>
-					<Button
-						onclick={handleSend}
-						disabled={isLoading}
-						class="w-full"
-					>
-						{#if isLoading}
-							Sending...
-						{:else}
-							Send Transaction
-						{/if}
-					</Button>
-				</Card.Footer>
-			</Card.Root>
+			<ConfirmDialog
+				show={showConfirmDialog}
+				{recipient}
+				{amount}
+				{message}
+				{category}
+				onConfirm={executeSend}
+				onCancel={() => showConfirmDialog = false}
+			/>
 		</div>
 	</Sidebar.Inset>
 </Sidebar.Provider>
-
-{#if showConfirmDialog}
-	<div class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" role="dialog" aria-modal="true" tabindex="-1" onclick={() => showConfirmDialog = false} onkeydown={(e) => e.key === 'Escape' && (showConfirmDialog = false)}>
-		<div class="bg-card border rounded-xl max-w-md w-full p-6 space-y-4" tabindex="-1" role="dialog" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.key === 'Escape' && (showConfirmDialog = false)}>
-			<div class="text-center">
-				<h3 class="text-lg font-bold">Confirm Transaction</h3>
-			</div>
-			<div class="bg-secondary border rounded-xl p-4 space-y-2">
-				<p class="text-xl font-bold text-primary">{amount} ZEI</p>
-				<div class="space-y-1">
-					<span class="text-muted-foreground font-medium text-sm">Recipient Address</span>
-					<p class="font-mono text-sm break-all">{recipient}</p>
-				</div>
-				{#if message}
-					<div class="space-y-1">
-						<span class="text-muted-foreground font-medium text-sm">Message</span>
-						<p class="text-sm">"{message}"</p>
-					</div>
-				{/if}
-			</div>
-			<div class="bg-red-50 border border-red-200 rounded-xl p-4 text-red-800">
-				<p class="font-semibold text-center">This action cannot be undone!</p>
-				<p class="text-sm text-center">Your message data will be saved and the transaction will be sent immediately.</p>
-			</div>
-			<div class="flex gap-3">
-				<Button
-					variant="outline"
-					class="flex-1"
-					onclick={() => showConfirmDialog = false}
-				>
-					Cancel
-				</Button>
-				<Button
-					class="flex-1"
-					onclick={executeSend}
-				>
-					Confirm & Send
-				</Button>
-			</div>
-		</div>
-	</div>
-{/if}
