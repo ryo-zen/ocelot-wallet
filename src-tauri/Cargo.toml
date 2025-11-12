@@ -1,0 +1,60 @@
+[package]
+name = "zeicoin-wallet"
+version = "0.1.0"
+description = "ZeiCoin Non-Custodial Wallet"
+authors = ["ZeiCoin Team"]
+license = "MIT"
+repository = ""
+edition = "2021"
+rust-version = "1.77.2"
+
+[lib]
+name = "app_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.5.1", features = [] }
+
+[dependencies]
+# Tauri core
+tauri = { version = "2.9.2", features = ["devtools"] }
+tauri-plugin-log = "2"
+tauri-plugin-mcp = { path = "../../tauri-plugin-mcp" }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Cryptography - Matching Zig implementation
+ed25519-dalek = { version = "2.1", features = ["rand_core"] }
+bip39 = { version = "2.0", features = ["rand"] }
+blake3 = "1.5"  # ZeiCoin uses BLAKE3 instead of SHA256/SHA512
+aes-gcm = "0.10"
+argon2 = { version = "0.5", features = ["std"] }
+sha2 = "0.10"
+hex = "0.4"
+rand = "0.8"
+getrandom = "0.2"
+
+# HD Wallet support (BIP32/BIP44)
+# Note: bip32 is for secp256k1, we'll use hmac/sha2 for ed25519 derivation
+hmac = "0.12"
+pbkdf2 = { version = "0.12", features = ["simple"] }
+
+# Bech32 address encoding
+bech32 = "0.11"
+
+# HTTP client for transaction API
+reqwest = { version = "0.12", features = ["json", "blocking"] }
+tokio = { version = "1", features = ["full"] }
+
+# File system
+dirs = "5.0"
+
+# Logging
+log = "0.4"
+
+[dev-dependencies]
+# Testing framework
+tokio-test = "0.4"
+tempfile = "3.8"
