@@ -16,23 +16,61 @@ Thumbs.db
 .env
 .env.*
 !.env.example
-!.env.test
 
 # Vite
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 
-# Project specific
-CLAUDE.md
-shadcn-svelte-mcp-server.js
+# SQLite files
+data/
+*.db
+*.db-wal
+*.db-shm
+
+# Temporary directories
+.claude/
+.playwright-mcp/
+
+# Old documentation (cleaned up)
+docs/
+reference/
+workflows/
+
 shadcn_svelte_docs_cache/
 shadcn_svelte_docs_mcp/
-reference/
+
+# MCP development servers
+shadcn-svelte-mcp-server.js
+*.mcp.js
+
+# Test scripts
+test_*.sh
+test_*.rs
+
+# Wallet data (DO NOT COMMIT PRIVATE KEYS!)
+*.wallet
+wallets/
+zeicoin_data*/
+
+# Tauri build artifacts
+src-tauri/target/
+src-tauri/Cargo.lock
+src-tauri/.svelte-kit/
+src-tauri/node_modules/
+src-tauri/gen/
+
+# Tauri debug and test files
+src-tauri/check_wallet.rs
+src-tauri/test_send.rs
+src-tauri/src/debug_*.rs
+src-tauri/src/decode_address.rs
+src-tauri/src/zeicoin_bip39.rs
+src-tauri/src/zeicoin_hd.rs
+
+# Static development assets
+static/avatars/
 static/placeholder.jpg
-static/avatars/shadcn.jpg
-user-onboarding.md
-wallet-creation-flow.md
-wallet-restore-implementation-plan.md
-/docs
-.env.example
-/workflows
+
+# MCP configuration (personal settings)
+.mcp.json
+CLAUDE.md
