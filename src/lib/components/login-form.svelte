@@ -7,7 +7,7 @@
 	import { cn, type WithElementRef } from "$lib/utils.js";
 	import { goto } from '$app/navigation';
 	import { authStore } from '$lib/stores/auth.js';
-	import { walletRegistrationService } from '$lib/services/wallet-registration.js';
+	import { tauriWalletAPI } from '$lib/services/tauri-wallet-api.js';
 	import type { HTMLFormAttributes } from "svelte/elements";
 
 	let {
@@ -17,7 +17,7 @@
 	}: WithElementRef<HTMLFormAttributes> = $props();
 
 	const id = $props.id();
-	
+
 	// Wallet selection state
 	let selectedWallet = $state("");
 	let password = $state("");
@@ -25,167 +25,84 @@
 	let isLoading = $state(false);
 	let walletsLoading = $state(false);
 
-	// Available wallets - dynamically discovered
+	// Available wallets - from Tauri
 	let wallets = $state<Array<{ value: string; label: string }>>([]);
 
 	const triggerContent = $derived(
 		wallets.find((w) => w.value === selectedWallet)?.label ?? "Select a wallet"
 	);
 
-	// Fetch available wallets dynamically from filesystem
-	async function fetchAvailableWallets(): Promise<string[]> {
-		try {
-			const response = await fetch('/api/wallets', {
-				method: 'GET',
-				headers: {
-					'Content-Type': 'application/json',
-				}
-			});
-
-			if (!response.ok) {
-				throw new Error(`HTTP error! status: ${response.status}`);
-			}
-
-			const result = await response.json();
-			
-			if (!result.success) {
-				throw new Error(result.error || 'Failed to discover wallets');
-			}
-			
-			return result.wallets || [];
-		} catch (error) {
-			console.error('Failed to fetch wallets:', error);
-			throw error;
-		}
-	}
-
-	// Load wallets dynamically on component mount
+	// Load wallets using Tauri command
 	onMount(async () => {
 		walletsLoading = true;
 		errorMessage = '';
-		
+
 		try {
-			const walletNames = await fetchAvailableWallets();
-			
-			// Convert wallet names to the format expected by the Select component
-			wallets = walletNames.map(name => ({
-				value: name,
-				label: name.charAt(0).toUpperCase() + name.slice(1)
-			}));
-			
-			if (wallets.length === 0) {
-				errorMessage = 'No wallets found in the system. Please create a wallet first.';
-			}
-		} catch (error) {
-			if (error instanceof Error) {
-				if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
-					errorMessage = 'Unable to connect to wallet service. Please ensure the wallet service is running.';
-				} else {
-					errorMessage = `Failed to load wallets: ${error.message}`;
+			const response = await tauriWalletAPI.listWallets();
+
+			if (tauriWalletAPI.isSuccess(response)) {
+				const data = tauriWalletAPI.unwrap(response);
+				const walletNames = data.wallets || [];
+
+				// Convert wallet names to the format expected by the Select component
+				wallets = walletNames.map(name => ({
+					value: name,
+					label: name.charAt(0).toUpperCase() + name.slice(1)
+				}));
+
+				if (wallets.length === 0) {
+					errorMessage = 'No wallets found. Please create a wallet first.';
 				}
 			} else {
-				errorMessage = 'An unexpected error occurred while loading wallets';
+				errorMessage = response.error || 'Failed to load wallets';
 			}
+		} catch (error) {
+			const err = error instanceof Error ? error.message : String(error);
+			errorMessage = `Failed to load wallets: ${err}`;
 		} finally {
 			walletsLoading = false;
 		}
 	});
 
-	async function validateWallet(wallet: string, password: string): Promise<boolean> {
-		try {
-			const response = await fetch('http://127.0.0.1:8081/ws', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-				},
-				body: JSON.stringify({
-					command: 'balance',
-					wallet: wallet,
-					password: password
-				})
-			});
-
-			if (!response.ok) {
-				throw new Error(`HTTP error! status: ${response.status}`);
-			}
-
-			const result = await response.json();
-			
-			// Check if the response indicates success (has balance data)
-			if (result.error) {
-				throw new Error(result.error);
-			}
-			
-			return true;
-		} catch (error) {
-			console.error('Wallet validation error:', error);
-			throw error;
-		}
-	}
-
 	async function handleSubmit(event: Event) {
 		event.preventDefault();
-		
+
 		// Don't allow submission if wallets are still loading
 		if (walletsLoading) {
 			errorMessage = 'Please wait while wallets are loading';
 			return;
 		}
-		
+
 		// Don't allow submission if no wallets are available
 		if (wallets.length === 0) {
 			errorMessage = 'No wallets available. Please create a wallet first.';
 			return;
 		}
-		
+
 		if (!selectedWallet || !password) {
 			errorMessage = 'Please select a wallet and enter password';
 			return;
 		}
-		
+
 		isLoading = true;
 		errorMessage = '';
-		
+
 		try {
-			await validateWallet(selectedWallet, password);
+			// Use auth store's login method which uses Tauri internally
+			const result = await authStore.login(selectedWallet, password);
 
-			// Store credentials in auth store
-			authStore.login(selectedWallet, password);
+			if (result.success) {
+				// Clear password from form
+				password = '';
 
-			// Auto-register wallet in database if not already registered
-			try {
-				const registrationResult = await walletRegistrationService.registerCurrentWalletIfNeeded();
-				if (registrationResult) {
-					if (registrationResult.success) {
-						console.log(`Auto-registered wallet ${selectedWallet} with address: ${registrationResult.address}`);
-					} else {
-						console.warn(`Auto-registration failed: ${registrationResult.error}`);
-					}
-				}
-			} catch (regError) {
-				// Don't fail login if registration fails
-				console.warn('Wallet auto-registration failed:', regError);
-			}
-
-			// Clear password from form
-			password = '';
-
-			// Navigate to main wallet interface
-			await goto('/wallet/dashboard');
-		} catch (error) {
-			if (error instanceof Error) {
-				if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
-					errorMessage = 'Unable to connect to wallet service. Please ensure the CLI Bridge is running on http://localhost:8081';
-				} else if (error.message.includes('Invalid password') || error.message.includes('authentication')) {
-					errorMessage = 'Invalid password for selected wallet';
-				} else if (error.message.includes('Wallet not found')) {
-					errorMessage = 'Wallet not found. Please check the wallet name';
-				} else {
-					errorMessage = `Authentication failed: ${error.message}`;
-				}
+				// Navigate to main wallet interface
+				await goto('/wallet/dashboard');
 			} else {
-				errorMessage = 'An unexpected error occurred during authentication';
+				errorMessage = result.error || 'Login failed';
 			}
+		} catch (error) {
+			const err = error instanceof Error ? error.message : String(error);
+			errorMessage = `Authentication failed: ${err}`;
 		} finally {
 			isLoading = false;
 		}
@@ -228,13 +145,13 @@
 			<Label for="password-{id}">Password</Label>
 			<Input id="password-{id}" type="password" bind:value={password} required />
 		</div>
-		
+
 		{#if errorMessage}
 			<div class="text-red-500 text-sm text-center">
 				{errorMessage}
 			</div>
 		{/if}
-		
+
 		<Button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white" disabled={isLoading || walletsLoading || wallets.length === 0}>
 			{#if walletsLoading}
 				Loading wallets...
@@ -244,20 +161,20 @@
 				Access Wallet
 			{/if}
 		</Button>
-		
-		<Button 
-			type="button" 
-			variant="outline" 
-			class="w-full" 
+
+		<Button
+			type="button"
+			variant="outline"
+			class="w-full"
 			onclick={() => goto('/wallet/create/name')}
 		>
 			Create New Wallet
 		</Button>
-		
-		<Button 
-			type="button" 
-			variant="outline" 
-			class="w-full" 
+
+		<Button
+			type="button"
+			variant="outline"
+			class="w-full"
 			onclick={() => goto('/wallet/restore')}
 		>
 			Restore Wallet

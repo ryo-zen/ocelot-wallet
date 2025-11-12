@@ -19,7 +19,7 @@
 		// Clear all authentication data
 		authStore.logout();
 		// Navigate to login page
-		goto('/login-02');
+		goto('/login');
 	}
 </script>
 

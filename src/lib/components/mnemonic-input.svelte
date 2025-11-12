@@ -91,7 +91,7 @@
 				onkeypress={(e) => handleKeyPress(e, index)}
 				autocomplete="off"
 				spellcheck={false}
-				maxlength="15"
+				maxlength={15}
 			/>
 		</div>
 	{/each}

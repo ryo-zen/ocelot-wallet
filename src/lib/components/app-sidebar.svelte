@@ -17,23 +17,6 @@
 			email: "m@example.com",
 			avatar: "/avatars/shadcn.jpg",
 		},
-		teams: [
-			{
-				name: "Acme Inc",
-				logo: GalleryVerticalEndIcon,
-				plan: "Enterprise",
-			},
-			{
-				name: "Acme Corp.",
-				logo: AudioWaveformIcon,
-				plan: "Startup",
-			},
-			{
-				name: "Evil Corp.",
-				logo: CommandIcon,
-				plan: "Free",
-			},
-		],
 		navMain: [
 			{
 				title: "Wallet",
@@ -98,31 +81,14 @@
 				],
 			},
 		],
-		projects: [
-			{
-				name: "Design Engineering",
-				url: "#",
-				icon: FrameIcon,
-			},
-			{
-				name: "Sales & Marketing",
-				url: "#",
-				icon: ChartPieIcon,
-			},
-			{
-				name: "Travel",
-				url: "#",
-				icon: MapIcon,
-			},
-		],
 	};
 </script>
 
 <script lang="ts">
 	import NavMain from "./nav-main.svelte";
-	import NavProjects from "./nav-projects.svelte";
+	import NavQuickActions from "./nav-quick-actions.svelte";
 	import NavUser from "./nav-user.svelte";
-	import TeamSwitcher from "./team-switcher.svelte";
+	import WalletSwitcher from "./wallet-switcher.svelte";
 	import * as Sidebar from "$lib/components/ui/sidebar/index.js";
 	import type { ComponentProps } from "svelte";
 
@@ -135,11 +101,11 @@
 
 <Sidebar.Root {collapsible} {...restProps}>
 	<Sidebar.Header>
-		<TeamSwitcher teams={data.teams} />
+		<WalletSwitcher />
 	</Sidebar.Header>
 	<Sidebar.Content>
 		<NavMain items={data.navMain} />
-		<NavProjects projects={data.projects} />
+		<NavQuickActions />
 	</Sidebar.Content>
 	<Sidebar.Footer>
 		<NavUser user={data.user} />
