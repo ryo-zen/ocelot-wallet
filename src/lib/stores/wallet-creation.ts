@@ -67,12 +67,12 @@ function clearSensitiveData(state: WalletCreationState) {
 // Start cleanup timer
 function startCleanupTimer() {
   if (cleanupTimer) clearTimeout(cleanupTimer);
-  
+
   cleanupTimer = setTimeout(() => {
     console.warn('🔒 Wallet creation flow timeout - cleaning up sensitive data');
     walletCreationStore.cleanup();
-    goto('/login-02');
-  }, maxFlowDurationMs);
+    goto('/login');
+  }, maxFlowDurationMs) as unknown as number;
 }
 
 // Reset cleanup timer (called on activity)
@@ -244,7 +244,7 @@ if (typeof window !== 'undefined') {
       hiddenTimer = setTimeout(() => {
         console.warn('🔒 Tab hidden for 5 minutes - cleaning up wallet creation');
         walletCreationStore.cleanup();
-      }, 5 * 60 * 1000);
+      }, 5 * 60 * 1000) as unknown as number;
     } else {
       // Clear timer when tab becomes visible again
       if (hiddenTimer) {

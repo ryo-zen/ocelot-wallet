@@ -14,7 +14,7 @@ export function validateWalletCreationStep(
   // If no active flow, redirect to start
   if (!state.currentStep) {
     console.warn(`🚫 No active wallet creation flow - redirecting to login`);
-    goto('/login-02');
+    goto('/login');
     return false;
   }
   
@@ -55,7 +55,7 @@ export function validateWalletCreationStep(
       
     default:
       console.warn(`🚫 Unknown wallet creation step: ${currentStep}`);
-      goto('/login-02');
+      goto('/login');
       return false;
   }
 }
@@ -143,7 +143,7 @@ export function getPreviousStep(
 // Redirect to appropriate step based on state
 export function redirectToAppropriateStep(state: WalletCreationState): void {
   if (!state.currentStep) {
-    goto('/login-02');
+    goto('/login');
     return;
   }
   
@@ -167,7 +167,7 @@ export function handleSuspiciousActivity(reason: string, state: WalletCreationSt
   console.error('🔒 Clearing wallet creation state for security');
   
   // Don't expose the cleanup method directly, handle through appropriate channels
-  goto('/login-02');
+  goto('/login');
 }
 
 // Progress calculation
