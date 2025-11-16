@@ -5,8 +5,8 @@ pub mod commands;  // Tauri commands
 pub mod crypto;    // Cryptographic primitives
 pub mod hd;        // HD key derivation (BIP32/BIP44)
 pub mod wallet;    // Wallet management
-pub mod zeicoin_bip39;  // ZeiCoin custom BIP39 (BLAKE3-based)
-pub mod zeicoin_hd;     // ZeiCoin custom HD derivation (BLAKE3-based)
+pub mod zeicoin_bip39;  // ZeiCoin BIP39 with BLAKE3 (optimized for performance)
+pub mod zeicoin_hd;     // ZeiCoin HD derivation with BLAKE3 (Ed25519 keys)
 
 // Re-export for convenience
 pub use address::{encode_address, decode_address, validate_address};

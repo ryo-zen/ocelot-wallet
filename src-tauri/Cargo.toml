@@ -30,7 +30,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 
 # Cryptography - Matching Zig implementation
-ed25519-dalek = { version = "2.1", features = ["rand_core"] }
+ed25519-dalek = { version = "2.1", features = ["rand_core", "zeroize"] }
 bip39 = { version = "2.0", features = ["rand"] }
 blake3 = "1.5"  # ZeiCoin uses BLAKE3 instead of SHA256/SHA512
 aes-gcm = "0.10"
@@ -39,6 +39,7 @@ sha2 = "0.10"
 hex = "0.4"
 rand = "0.8"
 getrandom = "0.2"
+zeroize = { version = "1.8", features = ["derive"] }
 
 # HD Wallet support (BIP32/BIP44)
 # Note: bip32 is for secp256k1, we'll use hmac/sha2 for ed25519 derivation

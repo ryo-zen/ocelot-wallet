@@ -64,8 +64,6 @@ src-tauri/check_wallet.rs
 src-tauri/test_send.rs
 src-tauri/src/debug_*.rs
 src-tauri/src/decode_address.rs
-src-tauri/src/zeicoin_bip39.rs
-src-tauri/src/zeicoin_hd.rs
 
 # Static development assets
 static/avatars/
