@@ -13,8 +13,8 @@ name = "app_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [features]
-default = ["mcp"]
-mcp = ["tauri-plugin-mcp"]
+default = []  # Disabled MCP for Windows builds
+# mcp = ["tauri-plugin-mcp"]
 
 [build-dependencies]
 tauri-build = { version = "2.5.1", features = [] }
@@ -23,7 +23,7 @@ tauri-build = { version = "2.5.1", features = [] }
 # Tauri core
 tauri = { version = "2.9.2", features = ["devtools"] }
 tauri-plugin-log = "2"
-tauri-plugin-mcp = { path = "../../tauri-plugin-mcp", optional = true }
+# tauri-plugin-mcp = { path = "../../tauri-plugin-mcp", optional = true }  # Disabled for Windows builds
 
 # Serialization
 serde = { version = "1.0", features = ["derive"] }
