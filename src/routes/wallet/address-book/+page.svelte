@@ -10,6 +10,7 @@
 	import { Textarea } from "$lib/components/ui/textarea/index.js";
 	import * as Card from "$lib/components/ui/card/index.js";
 	import { Badge } from "$lib/components/ui/badge/index.js";
+	import * as Select from "$lib/components/ui/select/index.js";
 	import BookUserIcon from "@lucide/svelte/icons/book-user";
 	import PlusIcon from "@lucide/svelte/icons/plus";
 	import EditIcon from "@lucide/svelte/icons/edit";
@@ -18,6 +19,15 @@
 	import SearchIcon from "@lucide/svelte/icons/search";
 	import { addressBookStore, type AddressBookEntry } from '$lib/stores/address-book.js';
 	import { goto } from '$app/navigation';
+
+	const categoryOptions = [
+		{ value: 'friends', label: 'Friends' },
+		{ value: 'family', label: 'Family' },
+		{ value: 'business', label: 'Business' },
+		{ value: 'exchange', label: 'Exchange' },
+		{ value: 'service', label: 'Service' },
+		{ value: 'other', label: 'Other' }
+	];
 
 	let addressBook = $state({ entries: [] });
 	addressBookStore.subscribe(state => {
@@ -35,6 +45,11 @@
 	let formAddress = $state('');
 	let formCategory = $state('');
 	let formNotes = $state('');
+
+	// Derived category display text
+	const categoryContent = $derived(
+		categoryOptions.find((option) => option.value === formCategory)?.label ?? "Select category"
+	);
 
 	// Filter entries based on search
 	let filteredEntries = $derived(
@@ -59,7 +74,10 @@
 		currentEntry = entry;
 		formName = entry.name;
 		formAddress = entry.address;
-		formCategory = entry.category || '';
+		// Convert category label to value for the select component
+		formCategory = entry.category
+			? categoryOptions.find(opt => opt.label === entry.category)?.value || ''
+			: '';
 		formNotes = entry.notes || '';
 		isEditDialogOpen = true;
 	}
@@ -70,10 +88,15 @@
 			return;
 		}
 
+		// Convert category value to label for display
+		const categoryLabel = formCategory
+			? categoryOptions.find(opt => opt.value === formCategory)?.label
+			: undefined;
+
 		addressBookStore.addEntry({
 			name: formName.trim(),
 			address: formAddress.trim(),
-			category: formCategory.trim() || undefined,
+			category: categoryLabel,
 			notes: formNotes.trim() || undefined,
 		});
 
@@ -86,10 +109,15 @@
 			return;
 		}
 
+		// Convert category value to label for display
+		const categoryLabel = formCategory
+			? categoryOptions.find(opt => opt.value === formCategory)?.label
+			: undefined;
+
 		addressBookStore.updateEntry(currentEntry.id, {
 			name: formName.trim(),
 			address: formAddress.trim(),
-			category: formCategory.trim() || undefined,
+			category: categoryLabel,
 			notes: formNotes.trim() || undefined,
 		});
 
@@ -279,7 +307,21 @@
 			</div>
 			<div class="grid gap-2">
 				<Label for="add-category">Category (optional)</Label>
-				<Input id="add-category" placeholder="e.g., Friends, Business" bind:value={formCategory} />
+				<Select.Root type="single" name="add-category" bind:value={formCategory}>
+					<Select.Trigger class="w-full">
+						{categoryContent}
+					</Select.Trigger>
+					<Select.Content>
+						<Select.Group>
+							<Select.Label>Categories</Select.Label>
+							{#each categoryOptions as option (option.value)}
+								<Select.Item value={option.value} label={option.label}>
+									{option.label}
+								</Select.Item>
+							{/each}
+						</Select.Group>
+					</Select.Content>
+				</Select.Root>
 			</div>
 			<div class="grid gap-2">
 				<Label for="add-notes">Notes (optional)</Label>
@@ -322,7 +364,21 @@
 			</div>
 			<div class="grid gap-2">
 				<Label for="edit-category">Category (optional)</Label>
-				<Input id="edit-category" placeholder="e.g., Friends, Business" bind:value={formCategory} />
+				<Select.Root type="single" name="edit-category" bind:value={formCategory}>
+					<Select.Trigger class="w-full">
+						{categoryContent}
+					</Select.Trigger>
+					<Select.Content>
+						<Select.Group>
+							<Select.Label>Categories</Select.Label>
+							{#each categoryOptions as option (option.value)}
+								<Select.Item value={option.value} label={option.label}>
+									{option.label}
+								</Select.Item>
+							{/each}
+						</Select.Group>
+					</Select.Content>
+				</Select.Root>
 			</div>
 			<div class="grid gap-2">
 				<Label for="edit-notes">Notes (optional)</Label>

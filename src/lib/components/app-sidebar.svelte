@@ -1,23 +1,9 @@
 <script lang="ts" module>
-	import AudioWaveformIcon from "@lucide/svelte/icons/audio-waveform";
-	import BookOpenIcon from "@lucide/svelte/icons/book-open";
-	import BotIcon from "@lucide/svelte/icons/bot";
-	import ChartPieIcon from "@lucide/svelte/icons/chart-pie";
-	import CommandIcon from "@lucide/svelte/icons/command";
-	import FrameIcon from "@lucide/svelte/icons/frame";
-	import GalleryVerticalEndIcon from "@lucide/svelte/icons/gallery-vertical-end";
-	import MapIcon from "@lucide/svelte/icons/map";
+	import MessageSquareIcon from "@lucide/svelte/icons/message-square";
 	import Settings2Icon from "@lucide/svelte/icons/settings-2";
 	import SquareTerminalIcon from "@lucide/svelte/icons/square-terminal";
 
-	// This is sample data.
-	const data = {
-		user: {
-			name: "shadcn",
-			email: "m@example.com",
-			avatar: "/avatars/shadcn.jpg",
-		},
-		navMain: [
+	const navMain = [
 			{
 				title: "Wallet",
 				url: "/wallet",
@@ -39,21 +25,17 @@
 				],
 			},
 			{
-				title: "L2 Messages",
-				url: "/l2-messages",
-				icon: BotIcon,
+				title: "Messages",
+				url: "/messages",
+				icon: MessageSquareIcon,
 				items: [
 					{
-						title: "Create Message",
-						url: "/l2-messages/create",
+						title: "All Messages",
+						url: "/messages",
 					},
 					{
-						title: "View Messages",
-						url: "/l2-messages/view",
-					},
-					{
-						title: "Enhanced Transactions",
-						url: "/l2-messages/enhanced",
+						title: "Compose",
+						url: "/messages/compose",
 					},
 				],
 			},
@@ -66,22 +48,9 @@
 						title: "General",
 						url: "/settings",
 					},
-					{
-						title: "Service Config",
-						url: "/settings/services",
-					},
-					{
-						title: "Wallet Settings",
-						url: "/settings/wallet",
-					},
-					{
-						title: "Security",
-						url: "/settings/security",
-					},
 				],
 			},
-		],
-	};
+		];
 </script>
 
 <script lang="ts">
@@ -97,6 +66,12 @@
 		collapsible = "icon",
 		...restProps
 	}: ComponentProps<typeof Sidebar.Root> = $props();
+
+	const userData = {
+		name: 'Zii Wallet',
+		email: '',
+		avatar: '/avatars/wallet.jpg'
+	};
 </script>
 
 <Sidebar.Root {collapsible} {...restProps}>
@@ -104,11 +79,11 @@
 		<WalletSwitcher />
 	</Sidebar.Header>
 	<Sidebar.Content>
-		<NavMain items={data.navMain} />
+		<NavMain items={navMain} />
 		<NavQuickActions />
 	</Sidebar.Content>
 	<Sidebar.Footer>
-		<NavUser user={data.user} />
+		<NavUser user={userData} />
 	</Sidebar.Footer>
 	<Sidebar.Rail />
 </Sidebar.Root>

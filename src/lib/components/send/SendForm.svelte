@@ -4,6 +4,7 @@
 	import { Input } from "$lib/components/ui/input/index.js";
 	import { Label } from "$lib/components/ui/label/index.js";
 	import * as Alert from "$lib/components/ui/alert/index.js";
+	import * as Select from "$lib/components/ui/select/index.js";
 	import CheckCircle2 from "lucide-svelte/icons/check-circle-2";
 	import AlertCircle from "lucide-svelte/icons/alert-circle";
 	import Copy from "lucide-svelte/icons/copy";
@@ -36,7 +37,6 @@
 	}: Props = $props();
 
 	const categories = [
-		{ value: '', label: 'Select category' },
 		{ value: 'payment', label: 'Payment' },
 		{ value: 'donation', label: 'Donation' },
 		{ value: 'refund', label: 'Refund' },
@@ -44,6 +44,11 @@
 		{ value: 'invoice', label: 'Invoice' },
 		{ value: 'other', label: 'Other' }
 	];
+
+	// Derived category display text
+	const categoryContent = $derived(
+		categories.find((cat) => cat.value === category)?.label ?? "Select category"
+	);
 
 	let copied = $state(false);
 
@@ -139,15 +144,21 @@
 		<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 			<div class="space-y-2">
 				<Label for="category">Category</Label>
-				<select
-					id="category"
-					bind:value={category}
-					class="w-full px-3 py-2 text-sm border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
-				>
-					{#each categories as cat (cat.value)}
-						<option value={cat.value}>{cat.label}</option>
-					{/each}
-				</select>
+				<Select.Root type="single" name="category" bind:value={category}>
+					<Select.Trigger class="w-full">
+						{categoryContent}
+					</Select.Trigger>
+					<Select.Content>
+						<Select.Group>
+							<Select.Label>Transaction Categories</Select.Label>
+							{#each categories as cat (cat.value)}
+								<Select.Item value={cat.value} label={cat.label}>
+									{cat.label}
+								</Select.Item>
+							{/each}
+						</Select.Group>
+					</Select.Content>
+				</Select.Root>
 			</div>
 		</div>
 

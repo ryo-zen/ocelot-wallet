@@ -540,6 +540,7 @@ mod tests {
             password.to_string(),
             recipient.to_string(),
             amount,
+            "http://209.38.31.77:10803".to_string(),
         );
 
         println!("\n📊 Transaction result:");

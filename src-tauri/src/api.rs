@@ -57,7 +57,7 @@ struct JsonRpcResponse {
     jsonrpc: String,
     result: Option<serde_json::Value>,
     error: Option<serde_json::Value>,
-    id: u64,
+    id: Option<serde_json::Value>, // Can be u64, string, or null
 }
 
 pub struct ZeiCoinAPI {
@@ -111,19 +111,53 @@ impl ZeiCoinAPI {
             return Err(format!("RPC error: {}", response.status()));
         }
 
-        let rpc_response: JsonRpcResponse = response
-            .json()
-            .map_err(|e| format!("Failed to parse RPC response: {}", e))?;
+        // Get response as text first for debugging
+        let response_text = response
+            .text()
+            .map_err(|e| format!("Failed to read RPC response: {}", e))?;
 
+        // Parse JSON-RPC response
+        let rpc_response: JsonRpcResponse = serde_json::from_str(&response_text)
+            .map_err(|e| format!("Failed to parse RPC response: {} (response: {})", e, response_text))?;
+
+        // Check for RPC errors
         if let Some(error) = rpc_response.error {
+            let error_str = error.to_string();
+
+            // Check if it's an "account not found" or "invalid params" error (new wallet)
+            if error_str.contains("Invalid params") ||
+               error_str.contains("not found") ||
+               error_str.contains("-32602") ||
+               error_str.contains("Internal error") {
+                // New wallet - return zero balance
+                return Ok(Balance {
+                    balance: 0,
+                    nonce: 0,
+                });
+            }
+
             return Err(format!("RPC error: {}", error));
         }
 
         let result = rpc_response.result.ok_or("No result in RPC response")?;
-        let balance: Balance = serde_json::from_value(result)
-            .map_err(|e| format!("Failed to parse balance: {}", e))?;
 
-        Ok(balance)
+        // Try to parse as Balance directly
+        match serde_json::from_value::<Balance>(result.clone()) {
+            Ok(balance) => Ok(balance),
+            Err(_) => {
+                // Maybe it's a nested response? Check for result.result
+                if let Some(nested_result) = result.get("result") {
+                    serde_json::from_value(nested_result.clone())
+                        .map_err(|e| format!("Failed to parse nested balance: {}", e))
+                } else {
+                    // If all else fails, assume it's a new wallet with zero balance
+                    Ok(Balance {
+                        balance: 0,
+                        nonce: 0,
+                    })
+                }
+            }
+        }
     }
 
     /// Get account nonce via JSON-RPC
@@ -152,6 +186,17 @@ impl ZeiCoinAPI {
             .map_err(|e| format!("Failed to parse RPC response: {}", e))?;
 
         if let Some(error) = rpc_response.error {
+            let error_str = error.to_string();
+
+            // Check if it's an "account not found" error (new wallet)
+            if error_str.contains("Invalid params") ||
+               error_str.contains("not found") ||
+               error_str.contains("-32602") ||
+               error_str.contains("Internal error") {
+                // New wallet - return nonce 0
+                return Ok(0);
+            }
+
             return Err(format!("RPC error: {}", error));
         }
 
@@ -161,7 +206,7 @@ impl ZeiCoinAPI {
         let nonce = result
             .get("nonce")
             .and_then(|v| v.as_u64())
-            .ok_or("Invalid nonce in response")?;
+            .unwrap_or(0); // Default to 0 for new accounts
 
         Ok(nonce)
     }

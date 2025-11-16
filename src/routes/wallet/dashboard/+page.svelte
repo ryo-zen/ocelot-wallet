@@ -15,6 +15,7 @@
 	let walletAddress = $state('');
 	let isLoading = $state(false);
 	let errorMessage = $state('');
+	let isNewWallet = $state(false);
 
 	async function fetchBalance() {
 		errorMessage = '';
@@ -70,9 +71,13 @@
 				currentBalance = formattedBalance;
 				walletAddress = address;
 				errorMessage = '';
+
+				// Check if this is a new wallet (zero balance)
+				isNewWallet = balanceNum === 0;
 			} else {
 				errorMessage = response.error || 'Failed to fetch balance';
 				currentBalance = 'Error';
+				isNewWallet = false;
 			}
 
 		} catch (error) {
@@ -130,6 +135,15 @@
 				{#if errorMessage}
 					<div class="bg-red-50 border border-red-200 rounded-xl p-4 text-red-800 font-medium mb-4">
 						{errorMessage}
+					</div>
+				{/if}
+
+				{#if isNewWallet && !errorMessage}
+					<div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
+						<h3 class="font-semibold text-blue-800 mb-2">New Wallet</h3>
+						<p class="text-sm text-blue-700">
+							This wallet has a zero balance. To get started, send ZEI to your wallet address below.
+						</p>
 					</div>
 				{/if}
 

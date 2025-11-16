@@ -25,15 +25,23 @@ pub fn run() {
             .build(),
         )?;
 
-        // Enable MCP plugin in debug mode for AI-assisted testing
-        log::info!("Development build detected, enabling MCP plugin");
-        app.handle().plugin(
-          tauri_plugin_mcp::init_with_config(
-            tauri_plugin_mcp::PluginConfig::new("zii-wallet".to_string())
-              .start_socket_server(true)
-              .socket_path("/tmp/zii-wallet-mcp.sock".into())
-          )
-        )?;
+        // Enable MCP plugin in debug mode for AI-assisted testing (if feature is enabled)
+        #[cfg(feature = "mcp")]
+        {
+          log::info!("Development build detected, enabling MCP plugin");
+          app.handle().plugin(
+            tauri_plugin_mcp::init_with_config(
+              tauri_plugin_mcp::PluginConfig::new("zii-wallet".to_string())
+                .start_socket_server(true)
+                .socket_path("/tmp/zii-wallet-mcp.sock".into())
+            )
+          )?;
+        }
+
+        #[cfg(not(feature = "mcp"))]
+        {
+          log::info!("Development build without MCP plugin");
+        }
       }
       Ok(())
     })
