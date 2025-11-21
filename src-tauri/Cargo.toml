@@ -14,7 +14,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 
 [features]
 default = []  # Disabled MCP for Windows builds
-# mcp = ["tauri-plugin-mcp"]
+mcp = []  # Define the feature but don't include any dependencies
 
 [build-dependencies]
 tauri-build = { version = "2.5.1", features = [] }
@@ -23,6 +23,8 @@ tauri-build = { version = "2.5.1", features = [] }
 # Tauri core
 tauri = { version = "2.9.2", features = ["devtools"] }
 tauri-plugin-log = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"
 # tauri-plugin-mcp = { path = "../../tauri-plugin-mcp", optional = true }  # Disabled for Windows builds
 
 # Serialization
@@ -58,6 +60,9 @@ dirs = "5.0"
 
 # Logging
 log = "0.4"
+
+# Date/time for backup timestamps
+chrono = "0.4"
 
 [dev-dependencies]
 # Testing framework

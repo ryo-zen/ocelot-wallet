@@ -197,10 +197,6 @@
 		</div>
 	</div>
 	<div class="bg-muted relative hidden lg:block">
-		<img
-			src="/placeholder.jpg"
-			alt="placeholder"
-			class="absolute inset-0 h-full w-full object-cover"
-		/>
+		<!-- Decorative background -->
 	</div>
 </div>

@@ -17,6 +17,8 @@ pub use wallet::{Wallet, WalletInfo, list_wallets};
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
+    .plugin(tauri_plugin_dialog::init())
+    .plugin(tauri_plugin_fs::init())
     .setup(|app| {
       if cfg!(debug_assertions) {
         app.handle().plugin(
@@ -55,6 +57,10 @@ pub fn run() {
       commands::send_transaction,
       commands::get_wallet_info,
       commands::get_transactions,
+      commands::create_encrypted_backup,
+      commands::create_plaintext_backup,
+      commands::restore_from_encrypted_backup,
+      commands::restore_from_plaintext_backup,
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");

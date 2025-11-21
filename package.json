@@ -24,7 +24,6 @@
 		"@tailwindcss/vite": "^4.0.0",
 		"@tauri-apps/api": "^2.9.0",
 		"@tauri-apps/cli": "^2.9.3",
-		"@types/better-sqlite3": "^7.6.13",
 		"@vitest/ui": "^4.0.7",
 		"bits-ui": "^2.11.0",
 		"clsx": "^2.1.1",
@@ -40,7 +39,7 @@
 		"vitest": "^4.0.7"
 	},
 	"dependencies": {
-		"@modelcontextprotocol/sdk": "^1.17.4",
-		"better-sqlite3": "^12.4.1"
+		"@tauri-apps/plugin-dialog": "^2.4.2",
+		"@tauri-apps/plugin-fs": "^2.4.4"
 	}
 }

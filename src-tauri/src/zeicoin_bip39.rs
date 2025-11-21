@@ -7,7 +7,6 @@
 use blake3;
 use bip39::Language;
 use rand::RngCore;
-use zeroize::Zeroize;
 
 /// Generate a new 12-word mnemonic using BLAKE3 checksum (not SHA256!)
 /// Matches: zeicoin/src/core/crypto/bip39.zig generateMnemonic()
@@ -65,7 +64,7 @@ fn entropy_to_mnemonic(entropy: &[u8]) -> Result<String, String> {
         // Defensive bounds check (BIP39 wordlist has exactly 2048 words)
         let word = wordlist.get(word_index as usize)
             .ok_or_else(|| format!("Invalid word index: {} (max 2047)", word_index))?;
-        words.push(word);
+        words.push(*word);
     }
 
     Ok(words.join(" "))

@@ -4,9 +4,13 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { walletCreationStore, type WalletCreationState } from '$lib/stores/wallet-creation.js';
 	import { validateWalletCreationStep, getStepNumber, TOTAL_STEPS } from '$lib/utils/route-guards.js';
+	import { save } from '@tauri-apps/plugin-dialog';
+	import { invoke } from '@tauri-apps/api/core';
+	import { writeTextFile } from '@tauri-apps/plugin-fs';
 
 	let isLoading = $state(false);
 	let storeState = $state<WalletCreationState | null>(null);
+	let isDownloading = $state(false);
 
 	onMount(() => {
 		// Subscribe to store changes
@@ -30,26 +34,81 @@
 		goto('/wallet/create/password');
 	}
 
-	function openPrintTemplate() {
-		if (!storeState) return;
-		
-		// Open print template in new window
-		const printWindow = window.open('/wallet/create/print-template', '_blank', 'width=800,height=600');
-		if (printWindow) {
-			// Pass mnemonic data to print window via localStorage (temporary)
-			const printData = {
+	async function downloadEncryptedBackup() {
+		if (!storeState || !storeState.password) return;
+
+		try {
+			isDownloading = true;
+
+			// Get encrypted backup content from Tauri
+			const response = await invoke<{success: boolean, data?: string, error?: string}>('create_encrypted_backup', {
 				walletName: storeState.walletName,
-				mnemonic: storeState.mnemonic.join(' '),
-				firstAddress: storeState.firstAddress,
-				creationDate: storeState.creationDate.toISOString()
-			};
-			
-			localStorage.setItem('wallet_print_data', JSON.stringify(printData));
-			
-			// Clean up print data after 1 minute
-			setTimeout(() => {
-				localStorage.removeItem('wallet_print_data');
-			}, 60 * 1000);
+				password: storeState.password,
+				mnemonic: storeState.mnemonic.join(' ')
+			});
+
+			if (!response.success || !response.data) {
+				throw new Error(response.error || 'Failed to create backup');
+			}
+
+			// Show save dialog
+			const filePath = await save({
+				defaultPath: `${storeState.walletName}_backup.zeibackup`,
+				filters: [{
+					name: 'ZeiCoin Backup',
+					extensions: ['zeibackup']
+				}]
+			});
+
+			if (filePath) {
+				// Write file
+				await writeTextFile(filePath, response.data);
+				alert('Encrypted backup file saved successfully!');
+			}
+		} catch (error) {
+			console.error('Failed to create encrypted backup:', error);
+			alert(`Failed to create encrypted backup: ${error}`);
+		} finally {
+			isDownloading = false;
+		}
+	}
+
+	async function downloadPlaintextBackup() {
+		if (!storeState || !storeState.password) return;
+
+		try {
+			isDownloading = true;
+
+			// Get plaintext backup content from Tauri
+			const response = await invoke<{success: boolean, data?: string, error?: string}>('create_plaintext_backup', {
+				walletName: storeState.walletName,
+				password: storeState.password,
+				mnemonic: storeState.mnemonic.join(' ')
+			});
+
+			if (!response.success || !response.data) {
+				throw new Error(response.error || 'Failed to create backup');
+			}
+
+			// Show save dialog
+			const filePath = await save({
+				defaultPath: `${storeState.walletName}_backup.txt`,
+				filters: [{
+					name: 'Text File',
+					extensions: ['txt']
+				}]
+			});
+
+			if (filePath) {
+				// Write file
+				await writeTextFile(filePath, response.data);
+				alert('Plain text backup file saved successfully!\n\nIMPORTANT: This file contains your unencrypted recovery phrase. Store it securely and delete it from your computer after backing up offline.');
+			}
+		} catch (error) {
+			console.error('Failed to create plaintext backup:', error);
+			alert(`Failed to create plaintext backup: ${error}`);
+		} finally {
+			isDownloading = false;
 		}
 	}
 
@@ -166,44 +225,67 @@
 					</div>
 					{/if}
 					
-					<!-- Action buttons -->
-					<div class="space-y-3">
-						<Button 
-							type="button" 
-							variant="outline" 
-							class="w-full"
-							onclick={openPrintTemplate}
-						>
-							Print Template
-						</Button>
-						
-						<div class="grid grid-cols-2 gap-3">
-							<Button 
-								type="button" 
-								variant="outline" 
-								onclick={handleBack}
-								disabled={isLoading}
-							>
-								Previous
-							</Button>
-							<Button 
+					<!-- Backup download options -->
+					<div class="bg-card border rounded-xl p-4 space-y-3">
+						<h3 class="font-semibold text-sm">Save Recovery Information</h3>
+						<p class="text-xs text-muted-foreground">
+							Save your recovery phrase for safekeeping. Choose encrypted (recommended) or plain text.
+						</p>
+
+						<div class="space-y-2">
+							<!-- Encrypted backup (recommended) -->
+							<Button
 								type="button"
-								onclick={handleNext}
-								disabled={isLoading}
+								variant="default"
+								class="w-full"
+								onclick={downloadEncryptedBackup}
+								disabled={isDownloading || isLoading}
 							>
-								Continue
+								{isDownloading ? 'Downloading...' : 'Download Encrypted Backup (.zeibackup)'}
 							</Button>
+							<p class="text-xs text-muted-foreground px-1">
+								✓ Recommended - Protected by wallet password, safe to store on USB/cloud
+							</p>
+
+							<!-- Plain text backup -->
+							<Button
+								type="button"
+								variant="outline"
+								class="w-full"
+								onclick={downloadPlaintextBackup}
+								disabled={isDownloading || isLoading}
+							>
+								Download Plain Text (.txt)
+							</Button>
+							<p class="text-xs text-yellow-700 px-1">
+								⚠ Advanced - Unencrypted, must be stored securely offline only
+							</p>
 						</div>
+					</div>
+
+					<!-- Navigation buttons -->
+					<div class="grid grid-cols-2 gap-3">
+						<Button
+							type="button"
+							variant="outline"
+							onclick={handleBack}
+							disabled={isLoading || isDownloading}
+						>
+							Previous
+						</Button>
+						<Button
+							type="button"
+							onclick={handleNext}
+							disabled={isLoading || isDownloading}
+						>
+							Continue
+						</Button>
 					</div>
 				</div>
 			</div>
 		</div>
 	</div>
 	<div class="bg-muted relative hidden lg:block">
-		<img
-			src="/placeholder.jpg"
-			alt="placeholder"
-			class="absolute inset-0 h-full w-full object-cover"
-		/>
+		<!-- Decorative background -->
 	</div>
 </div>

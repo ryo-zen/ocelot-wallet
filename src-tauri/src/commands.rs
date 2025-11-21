@@ -338,6 +338,274 @@ pub fn get_transactions(
     }
 }
 
+/// Backup file data structure
+#[derive(Serialize, serde::Deserialize)]
+pub struct BackupFileData {
+    pub version: String,
+    pub wallet_name: String,
+    pub first_address: String,
+    pub created: String,
+    pub encrypted_mnemonic: String,
+    pub salt: String,
+}
+
+/// Create encrypted backup file (.zeibackup)
+/// Returns JSON string that can be saved to file
+#[tauri::command]
+pub fn create_encrypted_backup(
+    wallet_name: String,
+    password: String,
+    mnemonic: String,
+) -> CommandResponse<String> {
+    use crate::crypto::{encrypt, generate_salt, generate_nonce};
+
+    // Load wallet to get address
+    let wallet = match Wallet::load(&wallet_name, &password) {
+        Ok(w) => w,
+        Err(e) => return CommandResponse::error(format!("Failed to load wallet: {}", e)),
+    };
+
+    let address = wallet.get_address();
+
+    // Generate salt and nonce for encryption
+    let salt = generate_salt();
+    let nonce = generate_nonce();
+
+    // Derive key from password
+    let key = match crate::crypto::derive_key(&password, &salt) {
+        Ok(k) => k,
+        Err(e) => return CommandResponse::error(format!("Failed to derive key: {}", e)),
+    };
+
+    // Encrypt mnemonic with derived key
+    let encrypted = match encrypt(mnemonic.as_bytes(), &key, &nonce) {
+        Ok(enc) => enc,
+        Err(e) => return CommandResponse::error(format!("Failed to encrypt mnemonic: {}", e)),
+    };
+
+    // Create backup data structure (store both salt and nonce)
+    let backup = BackupFileData {
+        version: "1.0".to_string(),
+        wallet_name,
+        first_address: address,
+        created: chrono::Utc::now().to_rfc3339(),
+        encrypted_mnemonic: format!("{}:{}", hex::encode(&nonce), hex::encode(&encrypted)),
+        salt: hex::encode(&salt),
+    };
+
+    // Serialize to JSON
+    match serde_json::to_string_pretty(&backup) {
+        Ok(json) => CommandResponse::success(json),
+        Err(e) => CommandResponse::error(format!("Failed to serialize backup: {}", e)),
+    }
+}
+
+/// Create plain text backup file (.txt)
+/// Returns text string that can be saved to file
+#[tauri::command]
+pub fn create_plaintext_backup(
+    wallet_name: String,
+    password: String,
+    mnemonic: String,
+) -> CommandResponse<String> {
+    // Load wallet to get address
+    let wallet = match Wallet::load(&wallet_name, &password) {
+        Ok(w) => w,
+        Err(e) => return CommandResponse::error(format!("Failed to load wallet: {}", e)),
+    };
+
+    let address = wallet.get_address();
+    let created = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC").to_string();
+
+    // Format mnemonic words with numbers
+    let words: Vec<&str> = mnemonic.split_whitespace().collect();
+    let mut numbered_words = String::new();
+    for (i, word) in words.iter().enumerate() {
+        numbered_words.push_str(&format!("{:2}. {:<10}", i + 1, word));
+        if (i + 1) % 3 == 0 {
+            numbered_words.push('\n');
+        }
+    }
+
+    // Create plain text backup
+    let backup_text = format!(
+r#"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                ZEICOIN WALLET RECOVERY BACKUP
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Wallet Name:    {}
+First Address:  {}
+Created:        {}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                    RECOVERY PHRASE (12 WORDS)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+{}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                      SECURITY WARNING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⚠️  CRITICAL: This file contains your UNENCRYPTED recovery phrase!
+
+IMPORTANT SECURITY GUIDELINES:
+1. Print this file and secure in a private location (safe, vault, etc.)
+2. Permanently delete the digital copy (delete and clear recycling bin)
+3. Never upload this file to cloud storage or email
+4. Never share these words with anyone, including support staff
+5. Consider making multiple copies stored in separate secure locations
+6. If compromised, immediately transfer funds to a new wallet
+
+TO RESTORE YOUR WALLET:
+1. Install ZeiCoin Wallet software
+2. Select "Import/Restore Wallet" option
+3. Enter the 12 recovery words in exact order shown above
+4. Set a new password for the restored wallet
+5. Your wallet and all funds will be restored
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+           CONFIDENTIAL DOCUMENT - HANDLE WITH EXTREME CARE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+"#,
+        wallet_name,
+        address,
+        created,
+        numbered_words.trim_end()
+    );
+
+    CommandResponse::success(backup_text)
+}
+
+/// Restore wallet from encrypted backup file
+#[tauri::command]
+pub fn restore_from_encrypted_backup(
+    backup_json: String,
+    password: String,
+    new_wallet_name: String,
+    new_password: String,
+) -> CommandResponse<RestoreWalletResponse> {
+    use crate::crypto::decrypt;
+
+    // Parse backup JSON
+    let backup: BackupFileData = match serde_json::from_str(&backup_json) {
+        Ok(b) => b,
+        Err(e) => return CommandResponse::error(format!("Invalid backup file format: {}", e)),
+    };
+
+    // Decode encrypted mnemonic (nonce:encrypted format)
+    let parts: Vec<&str> = backup.encrypted_mnemonic.split(':').collect();
+    if parts.len() != 2 {
+        return CommandResponse::error("Invalid encrypted mnemonic format".to_string());
+    }
+
+    let nonce = match hex::decode(parts[0]) {
+        Ok(n) => n,
+        Err(e) => return CommandResponse::error(format!("Invalid nonce data: {}", e)),
+    };
+
+    let encrypted = match hex::decode(parts[1]) {
+        Ok(e) => e,
+        Err(e) => return CommandResponse::error(format!("Invalid encrypted data: {}", e)),
+    };
+
+    let salt = match hex::decode(&backup.salt) {
+        Ok(s) => s,
+        Err(e) => return CommandResponse::error(format!("Invalid salt data: {}", e)),
+    };
+
+    let salt_array: [u8; 32] = match salt.try_into() {
+        Ok(arr) => arr,
+        Err(_) => return CommandResponse::error("Invalid salt length".to_string()),
+    };
+
+    let nonce_array: [u8; 12] = match nonce.try_into() {
+        Ok(arr) => arr,
+        Err(_) => return CommandResponse::error("Invalid nonce length".to_string()),
+    };
+
+    // Derive key from password
+    let key = match crate::crypto::derive_key(&password, &salt_array) {
+        Ok(k) => k,
+        Err(e) => return CommandResponse::error(format!("Failed to derive key: {}", e)),
+    };
+
+    // Decrypt mnemonic
+    let decrypted = match decrypt(&encrypted, &key, &nonce_array) {
+        Ok(d) => d,
+        Err(e) => return CommandResponse::error(format!("Failed to decrypt backup (wrong password?): {}", e)),
+    };
+
+    let mnemonic = match String::from_utf8(decrypted) {
+        Ok(m) => m,
+        Err(e) => return CommandResponse::error(format!("Invalid mnemonic data: {}", e)),
+    };
+
+    // Restore wallet with new password
+    match Wallet::restore(&new_wallet_name, &mnemonic, &new_password) {
+        Ok(_) => CommandResponse::success(RestoreWalletResponse {
+            wallet_name: new_wallet_name,
+            message: format!("Wallet restored successfully from backup file"),
+        }),
+        Err(e) => CommandResponse::error(format!("Failed to restore wallet: {}", e)),
+    }
+}
+
+/// Restore wallet from plain text backup
+#[tauri::command]
+pub fn restore_from_plaintext_backup(
+    backup_text: String,
+    new_wallet_name: String,
+    new_password: String,
+) -> CommandResponse<RestoreWalletResponse> {
+    // Extract mnemonic from backup text
+    // Look for lines after "RECOVERY PHRASE" section
+    let lines: Vec<&str> = backup_text.lines().collect();
+    let mut mnemonic_words = Vec::new();
+    let mut in_mnemonic_section = false;
+
+    for line in lines {
+        if line.contains("RECOVERY PHRASE") {
+            in_mnemonic_section = true;
+            continue;
+        }
+
+        if in_mnemonic_section && line.contains("━") {
+            // Found separator after mnemonic section
+            break;
+        }
+
+        if in_mnemonic_section && !line.trim().is_empty() {
+            // Parse numbered words like "1. word1  2. word2  3. word3"
+            let parts: Vec<&str> = line.split_whitespace().collect();
+            for (i, part) in parts.iter().enumerate() {
+                // Skip numbers (odd indices are words)
+                if i % 2 == 1 {
+                    mnemonic_words.push(*part);
+                }
+            }
+        }
+    }
+
+    if mnemonic_words.len() != 12 {
+        return CommandResponse::error(format!(
+            "Invalid backup file: expected 12 words, found {}",
+            mnemonic_words.len()
+        ));
+    }
+
+    let mnemonic = mnemonic_words.join(" ");
+
+    // Restore wallet
+    match Wallet::restore(&new_wallet_name, &mnemonic, &new_password) {
+        Ok(_) => CommandResponse::success(RestoreWalletResponse {
+            wallet_name: new_wallet_name,
+            message: format!("Wallet restored successfully from backup file"),
+        }),
+        Err(e) => CommandResponse::error(format!("Failed to restore wallet: {}", e)),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

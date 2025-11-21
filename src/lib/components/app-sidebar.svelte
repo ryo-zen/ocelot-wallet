@@ -70,7 +70,7 @@
 	const userData = {
 		name: 'Zii Wallet',
 		email: '',
-		avatar: '/avatars/wallet.jpg'
+		avatar: ''
 	};
 </script>
 

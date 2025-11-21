@@ -24,11 +24,11 @@
 			</div>
 		</div>
 	</div>
-	<div class="bg-muted relative hidden lg:block">
+	<div class="bg-muted relative hidden lg:block overflow-hidden">
 		<img
-			src="/placeholder.jpg"
-			alt="placeholder"
-			class="absolute inset-0 h-full w-full object-cover"
+			src="/login-image.jpg"
+			alt="ZeiCoin Wallet Login"
+			class="absolute inset-0 h-full w-full object-cover object-center"
 		/>
 	</div>
 </div>

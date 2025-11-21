@@ -6,7 +6,7 @@
 
 use blake3;
 use ed25519_dalek::{SigningKey, VerifyingKey};
-use zeroize::{Zeroize, ZeroizeOnDrop};
+use zeroize::ZeroizeOnDrop;
 
 /// HD key with chain code for derivation
 /// Matches: zeicoin/src/core/crypto/hd.zig HDKey struct
