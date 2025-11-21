@@ -19,7 +19,6 @@
 	// File upload state
 	let uploadedFileName = $state('');
 	let fileContent = $state('');
-	let isEncryptedFile = $state(false);
 	let backupPassword = $state('');
 
 	// Common state
@@ -71,7 +70,7 @@
 			return 'Wallet name must be at least 2 characters';
 		}
 
-		if (isEncryptedFile && !backupPassword) {
+		if (!backupPassword) {
 			return 'Please enter the original wallet password';
 		}
 
@@ -118,7 +117,7 @@
 
 				// Redirect to login after short delay
 				setTimeout(() => {
-					goto('/login-02');
+					goto('/login');
 				}, 2000);
 			} else {
 				errorMessage = response.error || 'Wallet restoration failed';
@@ -137,8 +136,8 @@
 			const selected = await open({
 				multiple: false,
 				filters: [{
-					name: 'Backup Files',
-					extensions: ['zeibackup', 'txt']
+					name: 'Encrypted Backup',
+					extensions: ['zeibackup']
 				}]
 			});
 
@@ -148,8 +147,6 @@
 
 				fileContent = await readTextFile(filePath);
 
-				// Detect file type
-				isEncryptedFile = uploadedFileName.endsWith('.zeibackup');
 				errorMessage = '';
 			}
 		} catch (error) {
@@ -173,24 +170,13 @@
 		successMessage = '';
 
 		try {
-			let response;
-
-			if (isEncryptedFile) {
-				// Restore from encrypted backup
-				response = await invoke<{success: boolean, data?: any, error?: string}>('restore_from_encrypted_backup', {
-					backupJson: fileContent,
-					password: backupPassword,
-					newWalletName: walletName.trim(),
-					newPassword: password
-				});
-			} else {
-				// Restore from plain text backup
-				response = await invoke<{success: boolean, data?: any, error?: string}>('restore_from_plaintext_backup', {
-					backupText: fileContent,
-					newWalletName: walletName.trim(),
-					newPassword: password
-				});
-			}
+			// Restore from encrypted backup
+			const response = await invoke<{success: boolean, data?: any, error?: string}>('restore_from_encrypted_backup', {
+				backupJson: fileContent,
+				password: backupPassword,
+				newWalletName: walletName.trim(),
+				newPassword: password
+			});
 
 			if (response.success) {
 				successMessage = `Wallet "${walletName}" restored successfully from backup file!`;
@@ -204,7 +190,7 @@
 
 				// Redirect to login after short delay
 				setTimeout(() => {
-					goto('/login-02');
+					goto('/login');
 				}, 2000);
 			} else {
 				errorMessage = response.error || 'Wallet restoration failed';
@@ -231,7 +217,6 @@
 	function clearFileForm() {
 		uploadedFileName = '';
 		fileContent = '';
-		isEncryptedFile = false;
 		backupPassword = '';
 		walletName = '';
 		password = '';
@@ -359,7 +344,7 @@
 								<div class="space-y-2">
 									<Label class="text-lg font-semibold">Backup File</Label>
 									<p class="text-sm text-muted-foreground">
-										Select a .zeibackup (encrypted) or .txt (plain text) backup file
+										Select your encrypted .zeibackup file
 									</p>
 								</div>
 
@@ -377,9 +362,7 @@
 									<div class="bg-secondary rounded-lg p-3 text-sm">
 										<div class="flex items-center justify-between">
 											<span class="font-medium">{uploadedFileName}</span>
-											<span class="text-muted-foreground">
-												{isEncryptedFile ? '(Encrypted)' : '(Plain Text)'}
-											</span>
+											<span class="text-muted-foreground">(Encrypted)</span>
 										</div>
 									</div>
 								{/if}
@@ -392,22 +375,20 @@
 								<h2 class="text-lg font-semibold">Wallet Details</h2>
 
 								<div class="grid gap-6">
-									{#if isEncryptedFile}
-										<div class="space-y-2">
-											<Label for="backupPassword">Original Wallet Password</Label>
-											<Input
-												id="backupPassword"
-												type="password"
-												bind:value={backupPassword}
-												placeholder="Password used to create this backup"
-												disabled={isLoading}
-												required
-											/>
-											<p class="text-xs text-muted-foreground">
-												Enter the password you used when creating this wallet
-											</p>
-										</div>
-									{/if}
+									<div class="space-y-2">
+										<Label for="backupPassword">Original Wallet Password</Label>
+										<Input
+											id="backupPassword"
+											type="password"
+											bind:value={backupPassword}
+											placeholder="Password used to create this backup"
+											disabled={isLoading}
+											required
+										/>
+										<p class="text-xs text-muted-foreground">
+											Enter the password you used when creating this wallet
+										</p>
+									</div>
 
 									<div class="space-y-2">
 										<Label for="fileWalletName">New Wallet Name</Label>
@@ -493,7 +474,7 @@
 				<Button
 					type="button"
 					variant="link"
-					onclick={() => goto('/login-02')}
+					onclick={() => goto('/login')}
 					disabled={isLoading}
 				>
 					Back to Login
