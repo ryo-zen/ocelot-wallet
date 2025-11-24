@@ -31,9 +31,9 @@ function getUserSelectedServerUrl(): string | null {
         return config.customServerUrl;
       }
 
-      // Map server IDs to URLs
+      // Map server IDs to URLs (HTTPS for production security)
       const serverUrls: Record<string, string> = {
-        'dallas-production': 'http://209.38.31.77:8080',
+        'dallas-production': 'https://209.38.31.77:443',
         'local-testnet': 'http://127.0.0.1:10802',
         'local-mainnet': 'http://127.0.0.1:3000'
       };
@@ -55,7 +55,7 @@ export function getServerConfig(): ServerConfig {
   const userSelectedUrl = getUserSelectedServerUrl();
 
   // Primary server URL (user selection > default)
-  const primary_url = userSelectedUrl || 'http://209.38.31.77:8080'; // Default to Dallas production
+  const primary_url = userSelectedUrl || 'https://209.38.31.77:443'; // Default to Dallas production (HTTPS)
 
   // No fallback URLs for now (can be added later)
   const fallback_urls: string[] = [];
@@ -95,7 +95,7 @@ export function isLocalServer(): boolean {
  * Default server configuration
  */
 export const defaultServerConfig: ServerConfig = {
-  primary_url: 'http://localhost:3000',
+  primary_url: 'https://209.38.31.77:443', // Production HTTPS endpoint
   fallback_urls: [],
   timeout_ms: 30000,
   retry_attempts: 3,

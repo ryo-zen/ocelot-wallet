@@ -39,7 +39,7 @@ A secure non-custodial desktop wallet for ZeiCoin cryptocurrency, built with Sve
 - **Bun**: Package manager (or npm/pnpm/yarn)
 - **Rust**: For Tauri backend (install via [rustup](https://rustup.rs/))
 - **Node.js**: v18 or higher
-- **Transaction API**: Running ZeiCoin transaction API (default: localhost:8080)
+- **Transaction API**: Running ZeiCoin transaction API with HTTPS (production: https://209.38.31.77:443)
 
 ### Installation
 
@@ -61,8 +61,9 @@ Create a `.env` file based on `.env.example`:
 
 ```bash
 # Transaction API endpoint (adjust to your server)
-ZEICOIN_SERVER_URL=http://localhost:8080
-PUBLIC_ZEICOIN_SERVER_URL=http://localhost:8080
+# Production uses HTTPS with TLS 1.3
+ZEICOIN_SERVER_URL=https://209.38.31.77:443
+PUBLIC_ZEICOIN_SERVER_URL=https://209.38.31.77:443
 ```
 
 ### Building for Production

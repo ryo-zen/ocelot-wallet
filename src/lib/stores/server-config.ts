@@ -19,10 +19,10 @@ export interface ServerOption {
 export const availableServers: ServerOption[] = [
 	{
 		id: 'sydney-production',
-		name: 'Sydney Production Server',
-		url: 'http://209.38.31.77:8080',
-		rpcUrl: 'http://209.38.31.77:10803',
-		description: 'Main production server in Sydney',
+		name: 'Sydney Production Server (HTTPS)',
+		url: 'https://209.38.31.77:443',
+		rpcUrl: 'https://209.38.31.77:10804',
+		description: 'Main production server with TLS 1.3 encryption',
 		type: 'production'
 	},
 	{
