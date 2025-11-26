@@ -52,7 +52,8 @@ pbkdf2 = { version = "0.12", features = ["simple"] }
 bech32 = "0.11"
 
 # HTTP client for transaction API
-reqwest = { version = "0.12", features = ["json", "blocking"] }
+# Using rustls-tls for cross-platform TLS support (handles self-signed certs on macOS)
+reqwest = { version = "0.12", default-features = false, features = ["json", "blocking", "rustls-tls"] }
 tokio = { version = "1", features = ["full"] }
 
 # File system
