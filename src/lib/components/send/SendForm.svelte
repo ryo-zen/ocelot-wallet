@@ -5,7 +5,7 @@
 	import { Label } from "$lib/components/ui/label/index.js";
 	import * as Alert from "$lib/components/ui/alert/index.js";
 	import * as Select from "$lib/components/ui/select/index.js";
-	import { CheckCircle2, AlertCircle, Copy, Check } from "lucide-svelte";
+	import { CheckCircle2, AlertCircle, Copy, Check } from "@lucide/svelte";
 
 	interface Props {
 		recipient: string;
