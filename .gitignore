@@ -34,7 +34,7 @@ data/
 # Old documentation (cleaned up)
 docs/
 reference/
-workflows/
+/workflows/
 
 shadcn_svelte_docs_cache/
 shadcn_svelte_docs_mcp/
