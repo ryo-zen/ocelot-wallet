@@ -1,4 +1,4 @@
-# Zii Wallet
+# Ocelot Wallet
 
 A secure non-custodial desktop wallet for ZeiCoin cryptocurrency, built with SvelteKit and Tauri.
 
@@ -30,7 +30,7 @@ A secure non-custodial desktop wallet for ZeiCoin cryptocurrency, built with Sve
 **Blockchain Integration:**
 - Transaction API for balance queries and broadcasting
 - JSON-RPC integration with ZeiCoin blockchain
-- HD derivation path: m/44'/0'/0'/0/{index}
+- HD derivation path: m/44'/882'/0'/0/{index}
 
 ## Development Setup
 
@@ -45,8 +45,8 @@ A secure non-custodial desktop wallet for ZeiCoin cryptocurrency, built with Sve
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/zii_wallet.git
-cd zii_wallet
+git clone https://github.com/ryo-zen/ocelot-wallet.git
+cd ocelot-wallet
 
 # Install dependencies
 bun install
@@ -138,7 +138,7 @@ cargo test --lib -- --test-threads=1
 ## Project Structure
 
 ```
-zii_wallet/
+ocelot-wallet/
 ├── src/                      # SvelteKit frontend
 │   ├── routes/              # Application pages
 │   ├── lib/

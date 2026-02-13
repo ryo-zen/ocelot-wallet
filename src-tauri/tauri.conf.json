@@ -1,8 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "ZeiCoin Wallet",
+  "productName": "Ocelot Wallet",
   "version": "0.1.0",
-  "identifier": "com.zeicoin.wallet",
+  "identifier": "com.ocelot.wallet",
   "build": {
     "frontendDist": "../build",
     "devUrl": "http://localhost:5173",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "zii-wallet",
+        "title": "Ocelot Wallet",
         "width": 800,
         "height": 600,
         "resizable": true,

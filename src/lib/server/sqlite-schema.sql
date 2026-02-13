@@ -1,4 +1,4 @@
--- Zii Wallet SQLite Cache Schema
+-- Ocelot Wallet SQLite Cache Schema
 -- Optimized for millisecond-level query performance
 -- This is a local cache layer synchronized with the ZeiCoin node
 

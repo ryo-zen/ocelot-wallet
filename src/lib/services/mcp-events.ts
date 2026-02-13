@@ -96,9 +96,9 @@ export function initializeMcpEvents() {
 			console.log('[MCP] Executing JavaScript:', code.substring(0, 100) + '...');
 
 			// Execute the JavaScript code
-			// Wrap in an IIFE that returns the result
-			const wrappedCode = `(function() { return (${code}); })()`;
-			const result = eval(wrappedCode);
+			// Use Function constructor instead of eval for better compatibility with build tools
+			// This is needed for MCP development/testing features
+			const result = new Function(`return (${code})`)();
 
 			// Serialize the result
 			let serializedResult: string;

@@ -113,7 +113,7 @@
 </script>
 
 <svelte:head>
-	<title>Create Wallet - Password | ZeiCoin Wallet</title>
+	<title>Create Wallet - Password | Ocelot Wallet</title>
 </svelte:head>
 
 <div class="grid min-h-svh lg:grid-cols-2">
@@ -123,7 +123,7 @@
 				<div class="bg-primary text-primary-foreground flex size-6 items-center justify-center rounded-md">
 					🪙
 				</div>
-				ZeiCoin Wallet
+				Ocelot Wallet
 			</a>
 		</div>
 

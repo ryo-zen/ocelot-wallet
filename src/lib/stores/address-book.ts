@@ -14,7 +14,7 @@ interface AddressBookState {
 	entries: AddressBookEntry[];
 }
 
-const STORAGE_KEY = 'zii_address_book';
+const STORAGE_KEY = 'ocelot_address_book';
 
 function createAddressBookStore() {
 	// Load from localStorage

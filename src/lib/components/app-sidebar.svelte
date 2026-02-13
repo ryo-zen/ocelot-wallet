@@ -68,7 +68,7 @@
 	}: ComponentProps<typeof Sidebar.Root> = $props();
 
 	const userData = {
-		name: 'Zii Wallet',
+		name: 'Ocelot Wallet',
 		email: '',
 		avatar: ''
 	};

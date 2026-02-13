@@ -3,7 +3,7 @@
 </script>
 
 <svelte:head>
-	<title>Login - Zii Wallet</title>
+	<title>Login - Ocelot Wallet</title>
 </svelte:head>
 
 <div class="grid min-h-svh lg:grid-cols-2">
@@ -15,7 +15,7 @@
 				>
 					🪙
 				</div>
-				ZeiCoin Wallet
+				Ocelot Wallet
 			</a>
 		</div>
 		<div class="flex flex-1 items-center justify-center">
@@ -27,7 +27,7 @@
 	<div class="bg-muted relative hidden lg:block overflow-hidden">
 		<img
 			src="/login-image.jpg"
-			alt="ZeiCoin Wallet Login"
+			alt="Ocelot Wallet Login"
 			class="absolute inset-0 h-full w-full object-cover object-center"
 		/>
 	</div>

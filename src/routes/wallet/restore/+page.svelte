@@ -227,7 +227,7 @@
 </script>
 
 <svelte:head>
-	<title>Restore Wallet | ZeiCoin Wallet</title>
+	<title>Restore Wallet | Ocelot Wallet</title>
 </svelte:head>
 
 <div class="min-h-screen bg-background p-4">

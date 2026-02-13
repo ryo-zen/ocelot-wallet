@@ -1,7 +1,7 @@
 [package]
-name = "zeicoin-wallet"
+name = "ocelot-wallet"
 version = "0.1.0"
-description = "ZeiCoin Non-Custodial Wallet"
+description = "Ocelot Wallet - ZeiCoin Non-Custodial Wallet"
 authors = ["ZeiCoin Team"]
 license = "MIT"
 repository = ""

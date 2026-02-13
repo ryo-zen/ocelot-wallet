@@ -39,7 +39,7 @@
 					<SparklesIcon class="mr-1 h-3 w-3" />
 					Premium Features
 				</Badge>
-				<h1 class="text-4xl font-bold tracking-tight">Upgrade to Zii Wallet Pro</h1>
+				<h1 class="text-4xl font-bold tracking-tight">Upgrade to Ocelot Wallet Pro</h1>
 				<p class="text-muted-foreground text-lg max-w-2xl mx-auto">
 					Unlock advanced features and take your cryptocurrency management to the next level
 				</p>

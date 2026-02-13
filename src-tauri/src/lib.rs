@@ -33,9 +33,9 @@ pub fn run() {
           log::info!("Development build detected, enabling MCP plugin");
           app.handle().plugin(
             tauri_plugin_mcp::init_with_config(
-              tauri_plugin_mcp::PluginConfig::new("zii-wallet".to_string())
+              tauri_plugin_mcp::PluginConfig::new("ocelot-wallet".to_string())
                 .start_socket_server(true)
-                .socket_path("/tmp/zii-wallet-mcp.sock".into())
+                .socket_path("/tmp/ocelot-wallet-mcp.sock".into())
             )
           )?;
         }
