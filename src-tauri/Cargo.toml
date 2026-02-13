@@ -2,7 +2,7 @@
 name = "ocelot-wallet"
 version = "0.1.0"
 description = "Ocelot Wallet - ZeiCoin Non-Custodial Wallet"
-authors = ["ZeiCoin Team"]
+authors = ["Ryo"]
 license = "MIT"
 repository = ""
 edition = "2021"

@@ -173,7 +173,7 @@ ocelot-wallet/
 
 ## License
 
-[Add your license here - e.g., MIT, Apache 2.0, etc.]
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Contributing
 
