@@ -5,7 +5,9 @@
 	import { Label } from "$lib/components/ui/label/index.js";
 	import * as Alert from "$lib/components/ui/alert/index.js";
 	import * as Select from "$lib/components/ui/select/index.js";
-	import { CheckCircle2, AlertCircle, Copy, Check } from "@lucide/svelte";
+	import { CheckCircle2, AlertCircle, Copy, Check, BookUser } from "@lucide/svelte";
+	import ContactPicker from './ContactPicker.svelte';
+	import { addressBookStore } from '$lib/stores/address-book.js';
 
 	interface Props {
 		recipient: string;
@@ -48,11 +50,18 @@
 	);
 
 	let copied = $state(false);
+	let showContactPicker = $state(false);
 
 	function copyToClipboard(text: string) {
 		navigator.clipboard.writeText(text);
 		copied = true;
 		setTimeout(() => copied = false, 2000);
+	}
+
+	function handleContactSelect(address: string, contactId: string) {
+		recipient = address;
+		addressBookStore.markAsUsed(contactId);
+		showContactPicker = false;
 	}
 
 	function extractHash(successMessage: string): string {
@@ -106,13 +115,24 @@
 		<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 			<div class="space-y-2">
 				<Label for="recipient">Recipient Address *</Label>
-				<Input
-					id="recipient"
-					type="text"
-					bind:value={recipient}
-					placeholder="tzei1xyz..."
-					class="font-mono text-sm"
-				/>
+				<div class="flex gap-2">
+					<Input
+						id="recipient"
+						type="text"
+						bind:value={recipient}
+						placeholder="tzei1xyz..."
+						class="font-mono text-sm flex-1"
+					/>
+					<Button
+						type="button"
+						variant="outline"
+						size="icon"
+						onclick={() => showContactPicker = true}
+						title="Select from address book"
+					>
+						<BookUser class="size-4" />
+					</Button>
+				</div>
 			</div>
 			<div class="space-y-2">
 				<Label for="amount">Amount (ZEI) *</Label>
@@ -184,3 +204,9 @@
 		</button>
 	</Card.Footer>
 </Card.Root>
+
+<ContactPicker
+	bind:open={showContactPicker}
+	onSelect={handleContactSelect}
+	onClose={() => showContactPicker = false}
+/>
