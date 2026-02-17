@@ -10,11 +10,7 @@
 	<div class="flex flex-col gap-4 p-6 md:p-10">
 		<div class="flex justify-center gap-2 md:justify-start">
 			<a href="/" class="flex items-center gap-2 font-medium">
-				<div
-					class="bg-primary text-primary-foreground flex size-6 items-center justify-center rounded-md"
-				>
-					🪙
-				</div>
+				<img src="/ocelot-logo.png" alt="Ocelot Wallet" class="size-8 rounded-lg" />
 				Ocelot Wallet
 			</a>
 		</div>

@@ -16,7 +16,6 @@ export interface TransactionData {
 	amount: string;
 	message?: string;
 	category?: string;
-	isPrivate?: boolean;
 }
 
 export interface TransactionResult {
@@ -59,8 +58,7 @@ export async function sendTransaction(
 						recipient: data.recipient.trim(),
 						message: data.message?.trim() || null,
 						category: data.category || null,
-						isPrivate: data.isPrivate || false,
-						txHash: result.transaction_hash
+							txHash: result.transaction_hash
 					});
 				} catch (l2Error) {
 					console.warn('L2 enhancement failed (transaction still sent):', l2Error);
@@ -90,7 +88,6 @@ async function saveL2Enhancements(data: {
 	recipient: string;
 	message: string | null;
 	category: string | null;
-	isPrivate: boolean;
 	txHash: string;
 }): Promise<void> {
 	const serverConfig = getServerConfig();
@@ -102,8 +99,7 @@ async function saveL2Enhancements(data: {
 			recipient: data.recipient,
 			message: data.message,
 			category: data.category,
-			is_private: data.isPrivate,
-			tx_hash: data.txHash
+				tx_hash: data.txHash
 		})
 	});
 

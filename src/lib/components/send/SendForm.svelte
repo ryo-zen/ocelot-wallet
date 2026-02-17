@@ -14,7 +14,6 @@
 		amount: string;
 		message: string;
 		category?: string;
-		isPrivate: boolean;
 		currentBalance: string;
 		isLoading: boolean;
 		error: string;
@@ -27,7 +26,6 @@
 		amount = $bindable(),
 		message = $bindable(),
 		category = $bindable(''),
-		isPrivate = $bindable(),
 		currentBalance,
 		isLoading,
 		error,
@@ -179,15 +177,6 @@
 			</div>
 		</div>
 
-		<div class="flex items-center space-x-2">
-			<input
-				type="checkbox"
-				id="isPrivate"
-				bind:checked={isPrivate}
-				class="rounded"
-			/>
-			<Label for="isPrivate" class="font-normal cursor-pointer">Mark as Private</Label>
-		</div>
 	</Card.Content>
 	<Card.Footer>
 		<button

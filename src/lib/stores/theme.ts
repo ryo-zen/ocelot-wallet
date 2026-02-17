@@ -1,7 +1,7 @@
 import { writable, get } from 'svelte/store';
 import { browser } from '$app/environment';
 
-export type Theme = 'default' | 'geist' | 'nature';
+export type Theme = 'default' | 'geist' | 'nature' | 'cyberpunk';
 export type Mode = 'light' | 'dark';
 
 interface ThemeState {
@@ -22,7 +22,7 @@ function loadInitialState(): ThemeState {
 		console.log('Loading from localStorage - theme:', savedTheme, 'mode:', savedMode);
 		
 		// Check if we have corrupted data and clean it up
-		if (savedTheme && (savedTheme === '[object Object]' || (!['default', 'geist', 'nature'].includes(savedTheme)))) {
+		if (savedTheme && (savedTheme === '[object Object]' || (!['default', 'geist', 'nature', 'cyberpunk'].includes(savedTheme)))) {
 			console.log('Clearing corrupted theme data');
 			localStorage.removeItem('wallet-theme');
 		}
@@ -33,7 +33,7 @@ function loadInitialState(): ThemeState {
 		}
 		
 		return {
-			theme: (savedTheme === 'default' || savedTheme === 'geist' || savedTheme === 'nature') ? savedTheme as Theme : defaultState.theme,
+			theme: (savedTheme === 'default' || savedTheme === 'geist' || savedTheme === 'nature' || savedTheme === 'cyberpunk') ? savedTheme as Theme : defaultState.theme,
 			mode: (savedMode === 'light' || savedMode === 'dark') ? savedMode as Mode : defaultState.mode
 		};
 	} catch (e) {
@@ -60,10 +60,10 @@ function createThemeStore() {
 		}
 		
 		// Remove all theme and mode classes
-		document.documentElement.classList.remove('default', 'geist', 'nature', 'light', 'dark');
+		document.documentElement.classList.remove('default', 'geist', 'nature', 'cyberpunk', 'light', 'dark');
 		
 		// Apply theme class (only if valid)
-		if (state.theme === 'default' || state.theme === 'geist' || state.theme === 'nature') {
+		if (state.theme === 'default' || state.theme === 'geist' || state.theme === 'nature' || state.theme === 'cyberpunk') {
 			document.documentElement.classList.add(state.theme);
 		}
 		
@@ -132,7 +132,7 @@ export const themeStore = createThemeStore();
 // Apply initial theme on load
 if (browser) {
 	themeStore.subscribe(state => {
-		document.documentElement.classList.remove('default', 'geist', 'light', 'dark');
+		document.documentElement.classList.remove('default', 'geist', 'nature', 'cyberpunk', 'light', 'dark');
 		document.documentElement.classList.add(state.theme, state.mode);
 	});
 }

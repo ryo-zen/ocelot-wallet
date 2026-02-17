@@ -18,7 +18,6 @@
 	let amount = $state('');
 	let message = $state('');
 	let category = $state('');
-	let isPrivate = $state(false);
 	let isLoading = $state(false);
 	let error = $state('');
 	let success = $state('');
@@ -104,8 +103,7 @@
 			amount,
 			message,
 			category,
-			isPrivate
-		};
+			};
 
 		// Type-safe credentials (already validated above)
 		const validCredentials = {
@@ -123,8 +121,7 @@
 			amount = '';
 			message = '';
 			category = '';
-			isPrivate = false;
-
+	
 			// Refresh balance
 			setTimeout(() => getBalance(), 2000);
 			authStore.refreshSession();
@@ -164,8 +161,7 @@
 				bind:amount={amount}
 				bind:message={message}
 				bind:category={category}
-				bind:isPrivate={isPrivate}
-				{currentBalance}
+					{currentBalance}
 				{isLoading}
 				{error}
 				{success}

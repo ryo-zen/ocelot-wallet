@@ -9,7 +9,8 @@
 	const themeOptions = [
 		{ value: 'default', label: 'Default', description: 'Original wallet design' },
 		{ value: 'geist', label: 'Geist', description: 'Modern monospace design' },
-		{ value: 'nature', label: 'Nature', description: 'Green natural theme' }
+		{ value: 'nature', label: 'Nature', description: 'Green natural theme' },
+		{ value: 'cyberpunk', label: 'Cyberpunk', description: 'Neon cyberpunk aesthetic' }
 	];
 
 	const modeOptions = [

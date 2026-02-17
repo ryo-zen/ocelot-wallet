@@ -37,7 +37,7 @@
 		onkeydown={handleKeyDown}
 	>
 		<div
-			class="bg-card border rounded-xl max-w-md w-full p-6 space-y-4"
+			class="bg-card border rounded-xl max-w-lg w-full p-6 space-y-4"
 			tabindex="-1"
 			role="dialog"
 			onclick={handleDialogClick}
@@ -47,15 +47,15 @@
 				<h3 class="text-lg font-bold">Confirm Transaction</h3>
 			</div>
 
-			<div class="bg-secondary border rounded-xl p-4 space-y-2">
-				<p class="text-xl font-bold text-primary">{amount} ZEI</p>
+			<div class="border rounded-xl p-4 space-y-2">
+				<p class="text-xl font-bold">{amount} ZEI</p>
 				<div class="space-y-1">
-					<span class="text-muted-foreground font-medium text-sm">Recipient Address</span>
+					<span class="text-muted-foreground text-sm">Recipient Address</span>
 					<p class="font-mono text-sm break-all">{recipient}</p>
 				</div>
 				{#if message}
 					<div class="space-y-1">
-						<span class="text-muted-foreground font-medium text-sm">Message</span>
+						<span class="text-muted-foreground text-sm">Message</span>
 						<p class="text-sm">"{message}"</p>
 					</div>
 				{/if}
