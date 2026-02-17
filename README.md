@@ -1,3 +1,8 @@
+
+  <div align="center">   
+    <img width="300" height="300" alt="ocelot-icon-3" src="https://github.com/user-attachments/assets/5f8d2e68-5f2d-46ae-88df-5d432e0a4ae6" />
+  </div>  
+
 # Ocelot Wallet
 
 A secure non-custodial desktop wallet for ZeiCoin cryptocurrency, built with SvelteKit and Tauri.
