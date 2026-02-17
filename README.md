@@ -5,7 +5,7 @@
 
 # Ocelot Wallet
 
-A secure non-custodial desktop wallet for ZeiCoin cryptocurrency, built with SvelteKit and Tauri.
+A secure non-custodial desktop wallet for ZeiCoin cryptocurrency, built with SvelteKit 5 and Tauri 2.
 
 ## Features
 

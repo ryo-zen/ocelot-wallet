@@ -12,6 +12,7 @@
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import { get } from 'svelte/store';
+	import Singularity from '$lib/components/singularity.svelte';
 	import Settings2Icon from "@lucide/svelte/icons/settings-2";
 	import ShieldIcon from "@lucide/svelte/icons/shield";
 	import ServerIcon from "@lucide/svelte/icons/server";
@@ -159,6 +160,8 @@
 			saveMessage = '';
 		}, 5000);
 	}
+
+	let singularityOpen = $state(false);
 
 	function getServerBadgeColor(type: string): string {
 		switch (type) {
@@ -341,9 +344,40 @@
 							</div>
 							<div class="text-sm text-muted-foreground">Enabled</div>
 						</div>
+						<div class="flex items-center justify-between py-2 border-t border-border mt-1 pt-3">
+							<div>
+								<p class="font-medium singularity-text">Singularity</p>
+								<p class="text-sm text-muted-foreground singularity-text">The singularity is near</p>
+							</div>
+							<Button variant="outline" size="sm" onclick={() => singularityOpen = true}><span class="singularity-text">Launch</span></Button>
+						</div>
 					</div>
 				</div>
 			</div>
 		</div>
 	</Sidebar.Inset>
 </Sidebar.Provider>
+
+<Singularity bind:open={singularityOpen} />
+
+<style>
+	.singularity-text {
+		transition: color 0.3s ease;
+		cursor: default;
+	}
+
+	.singularity-text:hover {
+		animation: singularity-shift 1.5s linear infinite;
+	}
+
+	@keyframes singularity-shift {
+		0%   { color: var(--primary); }
+		14%  { color: var(--chart-1); }
+		28%  { color: var(--accent-foreground); }
+		42%  { color: var(--chart-2); }
+		57%  { color: var(--secondary); }
+		71%  { color: var(--chart-3); }
+		85%  { color: var(--ring); }
+		100% { color: var(--primary); }
+	}
+</style>
