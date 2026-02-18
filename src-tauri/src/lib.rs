@@ -61,6 +61,8 @@ pub fn run() {
       commands::create_plaintext_backup,
       commands::restore_from_encrypted_backup,
       commands::restore_from_plaintext_backup,
+      commands::call_faucet,
+      commands::send_l2_message,
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");

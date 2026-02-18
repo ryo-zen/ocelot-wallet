@@ -1,12 +1,15 @@
 <script lang="ts">
 	import { tick } from 'svelte';
+	import { tauriWalletAPI } from '$lib/services/tauri-wallet-api.js';
 
 	interface Props {
 		open?: boolean;
 		onclose?: () => void;
+		address?: string;
+		serverUrl?: string;
 	}
 
-	let { open = $bindable(false), onclose }: Props = $props();
+	let { open = $bindable(false), onclose, address, serverUrl }: Props = $props();
 
 	let canvas = $state<HTMLCanvasElement | null>(null);
 	let interval: ReturnType<typeof setInterval> | null = null;
@@ -18,6 +21,14 @@
 	let score = $state(0);
 	let gameOver = $state(false);
 	let started = $state(false);
+
+	type FaucetStatus = 'idle' | 'claiming' | 'success' | 'error' | 'rate_limited';
+	let faucetStatus = $state<FaucetStatus>('idle');
+	let faucetAmount = $state('');
+	let faucetError = $state('');
+	let retryAfterSeconds = $state(0);
+
+	const claimableZei = $derived((Math.min(score, 200) / 100).toFixed(2));
 
 	const GRID = 20;
 	const CELL = 18;
@@ -53,6 +64,10 @@
 		score = 0;
 		gameOver = false;
 		started = true;
+		faucetStatus = 'idle';
+		faucetAmount = '';
+		faucetError = '';
+		retryAfterSeconds = 0;
 		placeFood();
 		if (interval) clearInterval(interval);
 		interval = setInterval(step, 150);
@@ -89,6 +104,39 @@
 			body.pop();
 		}
 		draw();
+	}
+
+	async function claimFaucet() {
+		faucetStatus = 'claiming';
+		try {
+			const response = await tauriWalletAPI.callFaucet(address!, score, serverUrl!);
+			if (tauriWalletAPI.isSuccess(response)) {
+				const data = tauriWalletAPI.unwrap(response);
+				if (data.claimed) {
+					faucetStatus = 'success';
+					faucetAmount = data.amount ?? '0';
+				} else if (data.retry_after_seconds != null) {
+					faucetStatus = 'rate_limited';
+					retryAfterSeconds = data.retry_after_seconds;
+				} else {
+					faucetStatus = 'error';
+					faucetError = data.error ?? 'Faucet unavailable';
+				}
+			} else {
+				faucetStatus = 'error';
+				faucetError = response.error ?? 'Failed to reach faucet';
+			}
+		} catch {
+			faucetStatus = 'error';
+			faucetError = 'Network error';
+		}
+	}
+
+	function formatRetryTime(seconds: number): string {
+		const h = Math.floor(seconds / 3600);
+		const m = Math.floor((seconds % 3600) / 60);
+		if (h > 0) return `${h}h ${m}m`;
+		return `${m}m`;
 	}
 
 	function colors() {
@@ -210,6 +258,26 @@
 					height={SIZE}
 					class="block rounded-lg"
 				></canvas>
+				{#if gameOver && address && serverUrl && score > 0}
+					<div class="mt-2 text-center px-1">
+						{#if faucetStatus === 'idle'}
+							<button
+								class="w-full text-xs font-semibold px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
+								onclick={claimFaucet}
+							>
+								Claim {claimableZei} ZEI
+							</button>
+						{:else if faucetStatus === 'claiming'}
+							<span class="text-xs text-muted-foreground">Claiming...</span>
+						{:else if faucetStatus === 'success'}
+							<span class="text-xs text-primary font-semibold">Claimed {faucetAmount} ZEI</span>
+						{:else if faucetStatus === 'rate_limited'}
+							<span class="text-xs text-muted-foreground">Already claimed today — retry in {formatRetryTime(retryAfterSeconds)}</span>
+						{:else if faucetStatus === 'error'}
+							<span class="text-xs text-destructive">{faucetError}</span>
+						{/if}
+					</div>
+				{/if}
 			</div>
 		</div>
 	</div>

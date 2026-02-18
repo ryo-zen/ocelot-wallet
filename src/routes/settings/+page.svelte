@@ -20,6 +20,7 @@
 	import RefreshCwIcon from "@lucide/svelte/icons/refresh-cw";
 
 	let isAuthenticated = false;
+	let walletAddress = $state('');
 	let selectedServerId = $state('sydney-production');
 	let currentServerUrl = $state('');
 	let currentRpcUrl = $state('');
@@ -30,6 +31,7 @@
 	// Subscribe to auth store
 	authStore.subscribe(state => {
 		isAuthenticated = state.isAuthenticated;
+		walletAddress = state.address ?? '';
 	});
 
 	// Subscribe to server config store
@@ -358,7 +360,7 @@
 	</Sidebar.Inset>
 </Sidebar.Provider>
 
-<Singularity bind:open={singularityOpen} />
+<Singularity bind:open={singularityOpen} address={walletAddress} serverUrl={currentServerUrl} />
 
 <style>
 	.singularity-text {

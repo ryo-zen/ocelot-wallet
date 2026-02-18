@@ -9,9 +9,9 @@
 /// Security: Uses HTTPS with TLS 1.3 encryption
 use serde::{Deserialize, Serialize};
 
-// Production HTTPS endpoints (TLS 1.3 encrypted)
-const DEFAULT_API_BASE: &str = "https://209.38.31.77:443";
-const DEFAULT_RPC_URL: &str = "https://209.38.31.77:10804";
+// Production HTTPS endpoints (TLS 1.3 encrypted, Let's Encrypt certificate)
+const DEFAULT_API_BASE: &str = "https://api.zei.network";
+const DEFAULT_RPC_URL: &str = "https://rpc.zei.network";
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Balance {
@@ -44,6 +44,21 @@ pub struct TransactionResponse {
     pub success: bool,
     pub tx_hash: Option<String>,
     pub error: Option<String>,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct FaucetResponse {
+    pub success: bool,
+    pub amount: Option<String>,
+    pub txid: Option<String>,
+    pub error: Option<String>,
+    pub retry_after_seconds: Option<u64>,
+}
+
+#[derive(Deserialize, Debug)]
+struct L2MessageCreateResponse {
+    success: bool,
+    temp_id: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -81,10 +96,8 @@ impl ZeiCoinAPI {
         // Note: Accepts self-signed certificates for now
         // TODO: Replace with Let's Encrypt certificate for production
         let client = reqwest::blocking::Client::builder()
-            .danger_accept_invalid_certs(true) // Accept self-signed certs
-            .danger_accept_invalid_hostnames(true) // Accept IP addresses in cert
-            .timeout(std::time::Duration::from_secs(30)) // 30 second timeout
-            .connect_timeout(std::time::Duration::from_secs(10)) // 10 second connect timeout
+            .timeout(std::time::Duration::from_secs(30))
+            .connect_timeout(std::time::Duration::from_secs(10))
             .build()
             .unwrap_or_else(|_| reqwest::blocking::Client::new());
 
@@ -97,12 +110,9 @@ impl ZeiCoinAPI {
 
     /// Create a new API client with custom RPC URL
     pub fn with_rpc_url(rpc_url: &str) -> Self {
-        // Configure HTTPS client with TLS 1.3 support
         let client = reqwest::blocking::Client::builder()
-            .danger_accept_invalid_certs(true) // Accept self-signed certs
-            .danger_accept_invalid_hostnames(true) // Accept IP addresses in cert
-            .timeout(std::time::Duration::from_secs(30)) // 30 second timeout
-            .connect_timeout(std::time::Duration::from_secs(10)) // 10 second connect timeout
+            .timeout(std::time::Duration::from_secs(30))
+            .connect_timeout(std::time::Duration::from_secs(10))
             .build()
             .unwrap_or_else(|_| reqwest::blocking::Client::new());
 
@@ -365,6 +375,82 @@ impl ZeiCoinAPI {
         response
             .text()
             .map_err(|e| format!("Failed to read response: {}", e))
+    }
+
+    /// Call the faucet to claim ZEI based on a game score
+    pub fn call_faucet(&self, address: &str, score: u32) -> Result<FaucetResponse, String> {
+        let url = format!("{}/faucet", self.base_url);
+
+        let body = serde_json::json!({
+            "address": address,
+            "score": score,
+        });
+
+        let response = self
+            .client
+            .post(&url)
+            .json(&body)
+            .send()
+            .map_err(|e| format!("Faucet request failed: {}", e))?;
+
+        response
+            .json::<FaucetResponse>()
+            .map_err(|e| format!("Failed to parse faucet response: {}", e))
+    }
+
+    /// Send an L2 message linked to a transaction (create draft → pending → confirm)
+    pub fn send_l2_message(
+        &self,
+        sender: &str,
+        recipient: &str,
+        message: Option<&str>,
+        category: Option<&str>,
+        tx_hash: &str,
+    ) -> Result<(), String> {
+        // Step 1: Create draft
+        let create_body = serde_json::json!({
+            "sender": sender,
+            "recipient": recipient,
+            "message": message,
+            "category": category,
+        });
+
+        let create_resp = self
+            .client
+            .post(format!("{}/api/l2/messages", self.base_url))
+            .json(&create_body)
+            .send()
+            .map_err(|e| format!("L2 create failed: {}", e))?;
+
+        let created: L2MessageCreateResponse = create_resp
+            .json()
+            .map_err(|e| format!("L2 create parse failed: {}", e))?;
+
+        if !created.success {
+            return Err("L2 create returned success=false".to_string());
+        }
+
+        let temp_id = created.temp_id.ok_or("L2 create returned no temp_id")?;
+
+        // Step 2: Mark pending
+        self.client
+            .put(format!("{}/api/l2/messages/{}/pending", self.base_url, temp_id))
+            .send()
+            .map_err(|e| format!("L2 pending failed: {}", e))?;
+
+        // Step 3: Confirm with tx_hash
+        let confirm_body = serde_json::json!({
+            "tx_hash": tx_hash,
+            "block_height": 0,
+        });
+
+        self.client
+            .put(format!("{}/api/l2/messages/{}/confirm", self.base_url, temp_id))
+            .json(&confirm_body)
+            .send()
+            .map_err(|e| format!("L2 confirm failed: {}", e))?;
+
+        Ok(())
     }
 }
 

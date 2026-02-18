@@ -33,7 +33,7 @@ function getUserSelectedServerUrl(): string | null {
 
       // Map server IDs to URLs (HTTPS for production security)
       const serverUrls: Record<string, string> = {
-        'dallas-production': 'https://209.38.31.77:443',
+        'sydney-production': 'https://api.zei.network',
         'local-testnet': 'http://127.0.0.1:10802',
         'local-mainnet': 'http://127.0.0.1:3000'
       };
@@ -55,7 +55,7 @@ export function getServerConfig(): ServerConfig {
   const userSelectedUrl = getUserSelectedServerUrl();
 
   // Primary server URL (user selection > default)
-  const primary_url = userSelectedUrl || 'https://209.38.31.77:443'; // Default to Dallas production (HTTPS)
+  const primary_url = userSelectedUrl || 'https://api.zei.network';
 
   // No fallback URLs for now (can be added later)
   const fallback_urls: string[] = [];
@@ -95,7 +95,7 @@ export function isLocalServer(): boolean {
  * Default server configuration
  */
 export const defaultServerConfig: ServerConfig = {
-  primary_url: 'https://209.38.31.77:443', // Production HTTPS endpoint
+  primary_url: 'https://api.zei.network',
   fallback_urls: [],
   timeout_ms: 30000,
   retry_attempts: 3,

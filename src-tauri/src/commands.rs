@@ -338,6 +338,82 @@ pub fn get_transactions(
     }
 }
 
+/// Send an L2 message linked to a transaction
+/// Handles create draft → mark pending → confirm in one call
+#[tauri::command]
+pub fn send_l2_message(
+    sender: String,
+    recipient: String,
+    message: Option<String>,
+    category: Option<String>,
+    tx_hash: String,
+    api_url: String,
+) -> CommandResponse<()> {
+    use crate::api::ZeiCoinAPI;
+
+    let api = ZeiCoinAPI::with_base_url(&api_url);
+    match api.send_l2_message(
+        &sender,
+        &recipient,
+        message.as_deref(),
+        category.as_deref(),
+        &tx_hash,
+    ) {
+        Ok(()) => CommandResponse::success(()),
+        Err(e) => CommandResponse::error(format!("L2 message failed: {}", e)),
+    }
+}
+
+/// Faucet result data
+#[derive(Serialize, Debug)]
+pub struct FaucetResult {
+    pub claimed: bool,
+    pub amount: Option<String>,
+    pub txid: Option<String>,
+    pub error: Option<String>,
+    pub retry_after_seconds: Option<u64>,
+}
+
+/// Call the testnet faucet with a game score to receive ZEI
+#[tauri::command]
+pub fn call_faucet(
+    address: String,
+    score: u32,
+    api_url: String,
+) -> CommandResponse<FaucetResult> {
+    use crate::api::ZeiCoinAPI;
+
+    let api = ZeiCoinAPI::with_base_url(&api_url);
+    match api.call_faucet(&address, score) {
+        Ok(resp) => {
+            if resp.success {
+                CommandResponse::success(FaucetResult {
+                    claimed: true,
+                    amount: resp.amount,
+                    txid: resp.txid,
+                    error: None,
+                    retry_after_seconds: None,
+                })
+            } else {
+                CommandResponse::success(FaucetResult {
+                    claimed: false,
+                    amount: None,
+                    txid: None,
+                    error: resp.error,
+                    retry_after_seconds: resp.retry_after_seconds,
+                })
+            }
+        }
+        Err(e) => CommandResponse::success(FaucetResult {
+            claimed: false,
+            amount: None,
+            txid: None,
+            error: Some(e),
+            retry_after_seconds: None,
+        }),
+    }
+}
+
 /// Backup file data structure
 #[derive(Serialize, serde::Deserialize)]
 pub struct BackupFileData {

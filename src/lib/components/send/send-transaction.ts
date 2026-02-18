@@ -8,8 +8,9 @@
  */
 
 import { tauriWalletAPI } from '$lib/services/tauri-wallet-api';
-import { getServerConfig } from '$lib/config/server-config';
 import { serverConfigStore } from '$lib/stores/server-config';
+import { authStore } from '$lib/stores/auth';
+import { get } from 'svelte/store';
 
 export interface TransactionData {
 	recipient: string;
@@ -47,21 +48,21 @@ export async function sendTransaction(
 		if (tauriWalletAPI.isSuccess(response)) {
 			const result = tauriWalletAPI.unwrap(response);
 
-			// Optional: Save L2 enhancements (messages, categories, tags)
+			// Optional: Save L2 message (non-blocking - transaction already succeeded)
 			if (data.message || data.category) {
-				// Note: We don't have sender address here anymore
-				// L2 enhancements are optional and non-blocking
-				// If this fails, transaction still succeeded
+				const sender = get(authStore).address || '';
+				const apiUrl = serverConfigStore.getCurrentServerUrl();
 				try {
-					await saveL2Enhancements({
-						sender: '', // Could get from auth store if needed
-						recipient: data.recipient.trim(),
-						message: data.message?.trim() || null,
-						category: data.category || null,
-							txHash: result.transaction_hash
-					});
+					await tauriWalletAPI.sendL2Message(
+						sender,
+						data.recipient.trim(),
+						data.message?.trim() || null,
+						data.category || null,
+						result.transaction_hash,
+						apiUrl
+					);
 				} catch (l2Error) {
-					console.warn('L2 enhancement failed (transaction still sent):', l2Error);
+					console.warn('L2 message failed (transaction still sent):', l2Error);
 				}
 			}
 
@@ -83,34 +84,6 @@ export async function sendTransaction(
 	}
 }
 
-async function saveL2Enhancements(data: {
-	sender: string;
-	recipient: string;
-	message: string | null;
-	category: string | null;
-	txHash: string;
-}): Promise<void> {
-	const serverConfig = getServerConfig();
-	const response = await fetch(`${serverConfig.primary_url}/api/l2/enhancements`, {
-		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({
-			sender: data.sender,
-			recipient: data.recipient,
-			message: data.message,
-			category: data.category,
-				tx_hash: data.txHash
-		})
-	});
-
-	if (response.ok) {
-		const result = await response.json();
-		// Mark as pending
-		await fetch(`${serverConfig.primary_url}/api/l2/enhancements/${result.temp_id}/pending`, {
-			method: 'PUT'
-		});
-	}
-}
 
 export function validateTransaction(
 	recipient: string,

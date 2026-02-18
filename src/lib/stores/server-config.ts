@@ -20,8 +20,8 @@ export const availableServers: ServerOption[] = [
 	{
 		id: 'sydney-production',
 		name: 'Sydney Production Server (HTTPS)',
-		url: 'https://209.38.31.77:443',
-		rpcUrl: 'https://209.38.31.77:10804',
+		url: 'https://api.zei.network',
+		rpcUrl: 'https://rpc.zei.network',
 		description: 'Main production server with TLS 1.3 encryption',
 		type: 'production'
 	},

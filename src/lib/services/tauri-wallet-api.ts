@@ -52,6 +52,14 @@ export interface TransactionHistoryResponse {
   transactions_json: string;
 }
 
+export interface FaucetResult {
+  claimed: boolean;
+  amount?: string;
+  txid?: string;
+  error?: string;
+  retry_after_seconds?: number;
+}
+
 /**
  * Tauri Wallet API Class
  * Provides typed interface to Tauri wallet commands
@@ -201,6 +209,52 @@ export class TauriWalletAPI {
       address,
       limit,
       offset,
+      apiUrl,
+    });
+  }
+
+  /**
+   * Call the testnet faucet with a game score to receive ZEI
+   * @param address - ZeiCoin address (tzei1...)
+   * @param score - Game score (capped at 200, payout = min(score,200)/100 ZEI)
+   * @param apiUrl - Transaction API URL
+   * @returns Faucet result
+   */
+  async callFaucet(
+    address: string,
+    score: number,
+    apiUrl: string
+  ): Promise<CommandResponse<FaucetResult>> {
+    return await invoke<CommandResponse<FaucetResult>>('call_faucet', {
+      address,
+      score,
+      apiUrl,
+    });
+  }
+
+  /**
+   * Send an L2 message linked to a transaction (create → pending → confirm)
+   * @param sender - Sender address
+   * @param recipient - Recipient address
+   * @param message - Optional message text
+   * @param category - Optional category
+   * @param txHash - Transaction hash to link the message to
+   * @param apiUrl - Transaction API base URL
+   */
+  async sendL2Message(
+    sender: string,
+    recipient: string,
+    message: string | null,
+    category: string | null,
+    txHash: string,
+    apiUrl: string
+  ): Promise<CommandResponse<null>> {
+    return await invoke<CommandResponse<null>>('send_l2_message', {
+      sender,
+      recipient,
+      message,
+      category,
+      txHash,
       apiUrl,
     });
   }
