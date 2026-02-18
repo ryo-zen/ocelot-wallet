@@ -9,10 +9,74 @@
 	import { Label } from "$lib/components/ui/label";
 	import { Textarea } from "$lib/components/ui/textarea";
 	import SendIcon from "@lucide/svelte/icons/send";
+	import { authStore } from '$lib/stores/auth.js';
+	import { sendTransaction } from '$lib/components/send/send-transaction.js';
+	import { goto } from '$app/navigation';
+	import { onMount } from 'svelte';
 
-	let recipient = $state("");
-	let subject = $state("");
-	let message = $state("");
+	// Dust amount — minimum to carry a message (just the fee, 0.00005 ZEI)
+	const DUST_AMOUNT = '0.00005';
+
+
+	let recipient = $state('');
+	let message = $state('');
+	let isLoading = $state(false);
+	let error = $state('');
+	let success = $state('');
+	let isAuthenticated = $state(false);
+
+	authStore.subscribe(state => {
+		isAuthenticated = state.isAuthenticated;
+	});
+
+	onMount(() => {
+		if (!isAuthenticated) {
+			return goto('/login');
+		}
+	});
+
+	async function handleSend(e: Event) {
+		e.preventDefault();
+		error = '';
+		success = '';
+
+		if (!recipient.trim()) {
+			error = 'Recipient address is required';
+			return;
+		}
+		if (!message.trim()) {
+			error = 'Message is required';
+			return;
+		}
+
+		const credentials = authStore.getCredentials();
+		if (!credentials.wallet || !credentials.password) {
+			error = 'Not authenticated';
+			return;
+		}
+
+		isLoading = true;
+
+		const result = await sendTransaction(
+			{ wallet: credentials.wallet, password: credentials.password },
+			{
+				recipient: recipient.trim(),
+				amount: DUST_AMOUNT,
+				message: message.trim(),
+			}
+		);
+
+		if (result.success) {
+			success = 'Message sent successfully.';
+			recipient = '';
+			message = '';
+			authStore.refreshSession();
+		} else {
+			error = result.error || 'Failed to send message';
+		}
+
+		isLoading = false;
+	}
 </script>
 
 <Sidebar.Provider>
@@ -46,62 +110,66 @@
 				</p>
 			</div>
 
-	<!-- Compose Form -->
-	<Card class="p-6">
-		<form class="space-y-6">
-			<div class="space-y-2">
-				<Label for="recipient">Recipient Address</Label>
-				<Input
-					id="recipient"
-					type="text"
-					placeholder="tzei1..."
-					bind:value={recipient}
-				/>
-				<p class="text-sm text-muted-foreground">
-					Enter the ZeiCoin address of the recipient
-				</p>
-			</div>
+			<Card class="p-6">
+				<form class="space-y-6" onsubmit={handleSend}>
 
-			<div class="space-y-2">
-				<Label for="subject">Subject</Label>
-				<Input
-					id="subject"
-					type="text"
-					placeholder="Enter message subject"
-					bind:value={subject}
-				/>
-			</div>
+					{#if error}
+						<div class="bg-destructive/10 border border-destructive/20 rounded-lg p-3 text-destructive text-sm font-medium">
+							{error}
+						</div>
+					{/if}
 
-			<div class="space-y-2">
-				<Label for="message">Message</Label>
-				<Textarea
-					id="message"
-					placeholder="Enter your message..."
-					rows={8}
-					bind:value={message}
-				/>
-				<p class="text-sm text-muted-foreground">
-					Maximum 1000 characters
-				</p>
-			</div>
+					{#if success}
+						<div class="bg-primary/10 border border-primary/20 rounded-lg p-3 text-primary text-sm font-medium">
+							{success}
+						</div>
+					{/if}
 
-			<div class="flex items-center justify-between pt-4 border-t">
-				<div class="text-sm text-muted-foreground">
-					Estimated fee: 0.00005 ZEI
-				</div>
-				<div class="flex gap-3">
-					<Button href="/messages" variant="outline">
-						Cancel
-					</Button>
-					<Button type="submit" disabled>
-						<SendIcon class="mr-2 h-4 w-4" />
-						Send Message
-					</Button>
-				</div>
-			</div>
-		</form>
-	</Card>
+					<div class="space-y-2">
+						<Label for="recipient">Recipient Address</Label>
+						<Input
+							id="recipient"
+							type="text"
+							placeholder="tzei1..."
+							bind:value={recipient}
+							disabled={isLoading}
+						/>
+						<p class="text-sm text-muted-foreground">
+							Enter the ZeiCoin address of the recipient
+						</p>
+					</div>
 
-	</div>
+	
+					<div class="space-y-2">
+						<Label for="message">Message</Label>
+						<Textarea
+							id="message"
+							placeholder="Enter your message..."
+							rows={8}
+							bind:value={message}
+							disabled={isLoading}
+						/>
+						<p class="text-sm text-muted-foreground">
+							Maximum 1000 characters
+						</p>
+					</div>
+
+					<div class="flex items-center justify-between pt-4 border-t">
+						<div class="text-sm text-muted-foreground">
+							Total cost: ~0.0001 ZEI (dust + fee)
+						</div>
+						<div class="flex gap-3">
+							<Button href="/messages" variant="outline" disabled={isLoading}>
+								Cancel
+							</Button>
+							<Button type="submit" disabled={isLoading}>
+								<SendIcon class="mr-2 h-4 w-4" />
+								{isLoading ? 'Sending...' : 'Send Message'}
+							</Button>
+						</div>
+					</div>
+				</form>
+			</Card>
+		</div>
 	</Sidebar.Inset>
 </Sidebar.Provider>
