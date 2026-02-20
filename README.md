@@ -15,6 +15,8 @@ A secure non-custodial desktop wallet for ZeiCoin cryptocurrency, built with Sve
 - **Modern UI**: Clean interface built with SvelteKit and ShadCN/UI components
 - **Strong Encryption**: Argon2id KDF + AES-256-GCM encryption for wallet files
 - **Transaction Management**: Send ZeiCoin with optional L2 message enhancements
+- **L2 Messaging**: Send and receive on-chain messages; compose messages with dust + fee
+- **Address Book**: Save, categorize, and manage recipient contacts
 - **Balance Tracking**: Real-time balance updates from the blockchain
 - **Session Security**: 30-minute auto-logout for enhanced security
 
@@ -96,7 +98,7 @@ cargo test --lib -- --test-threads=1
 
 **Test Coverage:**
 - Frontend: 30/30 tests passing (18 API + 12 auth)
-- Backend: 34/34 tests passing (100% coverage)
+- Backend: 41/41 tests passing
 
 ## Usage
 
@@ -112,7 +114,7 @@ cargo test --lib -- --test-threads=1
 ### Restoring a Wallet
 
 1. Click "Restore Wallet" from login screen
-2. Enter your 12-word recovery phrase
+2. Enter your 12-word recovery phrase **or** import a `.zeibackup` file
 3. Create a new password
 4. Your wallet will be restored with all funds intact
 
@@ -145,23 +147,35 @@ cargo test --lib -- --test-threads=1
 ```
 ocelot-wallet/
 ├── src/                      # SvelteKit frontend
-│   ├── routes/              # Application pages
-│   ├── lib/
-│   │   ├── components/      # Svelte components
-│   │   ├── stores/          # State management
-│   │   ├── services/        # API clients
-│   │   └── config/          # Configuration
-│   └── tests/               # Frontend tests
+│   ├── routes/
+│   │   ├── login/           # Wallet selection and login
+│   │   ├── wallet/
+│   │   │   ├── create/      # Multi-step wallet creation
+│   │   │   ├── restore/     # Wallet restoration
+│   │   │   ├── dashboard/   # Balance and overview
+│   │   │   ├── send/        # Send ZeiCoin
+│   │   │   ├── transactions/# Transaction history
+│   │   │   └── address-book/# Contact management
+│   │   ├── messages/        # L2 message inbox
+│   │   │   └── compose/     # Compose L2 message
+│   │   └── settings/        # Application settings
+│   └── lib/
+│       ├── components/      # Svelte components
+│       ├── stores/          # State management
+│       ├── services/        # API clients
+│       └── config/          # Configuration
 ├── src-tauri/               # Tauri Rust backend
-│   ├── src/
-│   │   ├── commands.rs      # Tauri command handlers
-│   │   ├── wallet.rs        # Wallet management
-│   │   ├── crypto.rs        # Encryption
-│   │   ├── hd.rs           # HD derivation
-│   │   ├── address.rs      # Address encoding
-│   │   └── api.rs          # Transaction API client
-│   └── tests/              # Backend tests
-└── static/                 # Static assets
+│   └── src/
+│       ├── commands.rs      # Tauri command handlers
+│       ├── wallet.rs        # Wallet management
+│       ├── crypto.rs        # Encryption
+│       ├── hd.rs            # HD derivation
+│       ├── zeicoin_hd.rs    # ZeiCoin-specific HD derivation
+│       ├── zeicoin_bip39.rs # BIP39 mnemonic handling
+│       ├── address.rs       # Address encoding
+│       ├── decode_address.rs# Address decoding
+│       └── api.rs           # Transaction API client
+└── static/                  # Static assets
 ```
 
 ## Technology Stack

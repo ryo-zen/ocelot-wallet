@@ -9,14 +9,16 @@
 	import { Label } from "$lib/components/ui/label";
 	import { Textarea } from "$lib/components/ui/textarea";
 	import SendIcon from "@lucide/svelte/icons/send";
+	import BookUserIcon from "@lucide/svelte/icons/book-user";
 	import { authStore } from '$lib/stores/auth.js';
+	import { addressBookStore } from '$lib/stores/address-book.js';
 	import { sendTransaction } from '$lib/components/send/send-transaction.js';
+	import ContactPicker from '$lib/components/send/ContactPicker.svelte';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 
 	// Dust amount — minimum to carry a message (just the fee, 0.00005 ZEI)
 	const DUST_AMOUNT = '0.00005';
-
 
 	let recipient = $state('');
 	let message = $state('');
@@ -24,10 +26,17 @@
 	let error = $state('');
 	let success = $state('');
 	let isAuthenticated = $state(false);
+	let showContactPicker = $state(false);
 
 	authStore.subscribe(state => {
 		isAuthenticated = state.isAuthenticated;
 	});
+
+	function handleContactSelect(address: string, contactId: string) {
+		recipient = address;
+		addressBookStore.markAsUsed(contactId);
+		showContactPicker = false;
+	}
 
 	onMount(() => {
 		if (!isAuthenticated) {
@@ -127,19 +136,31 @@
 
 					<div class="space-y-2">
 						<Label for="recipient">Recipient Address</Label>
-						<Input
-							id="recipient"
-							type="text"
-							placeholder="tzei1..."
-							bind:value={recipient}
-							disabled={isLoading}
-						/>
+						<div class="flex gap-2">
+							<Input
+								id="recipient"
+								type="text"
+								placeholder="tzei1..."
+								bind:value={recipient}
+								disabled={isLoading}
+								class="font-mono text-sm flex-1"
+							/>
+							<Button
+								type="button"
+								variant="outline"
+								size="icon"
+								onclick={() => showContactPicker = true}
+								title="Select from address book"
+								disabled={isLoading}
+							>
+								<BookUserIcon class="size-4" />
+							</Button>
+						</div>
 						<p class="text-sm text-muted-foreground">
 							Enter the ZeiCoin address of the recipient
 						</p>
 					</div>
 
-	
 					<div class="space-y-2">
 						<Label for="message">Message</Label>
 						<Textarea
@@ -173,3 +194,9 @@
 		</div>
 	</Sidebar.Inset>
 </Sidebar.Provider>
+
+<ContactPicker
+	bind:open={showContactPicker}
+	onSelect={handleContactSelect}
+	onClose={() => showContactPicker = false}
+/>

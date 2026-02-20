@@ -9,6 +9,7 @@
 	import { authStore } from '$lib/stores/auth.js';
 	import { tauriWalletAPI } from '$lib/services/tauri-wallet-api.js';
 	import { serverConfigStore } from '$lib/stores/server-config.js';
+	import { formatAmount, type Transaction } from '$lib/components/transactions/transaction-utils.js';
 
 	let currentWallet = $state('');
 	let currentBalance = $state('');
@@ -16,6 +17,7 @@
 	let isLoading = $state(false);
 	let errorMessage = $state('');
 	let isNewWallet = $state(false);
+	let recentTxs = $state<Transaction[]>([]);
 
 	async function fetchBalance() {
 		errorMessage = '';
@@ -74,6 +76,15 @@
 
 				// Check if this is a new wallet (zero balance)
 				isNewWallet = balanceNum === 0;
+
+				// Fetch most recent transaction
+				const apiUrl = serverConfigStore.getCurrentServerUrl();
+				const txResponse = await tauriWalletAPI.getTransactions(address, 3, 0, apiUrl);
+				if (tauriWalletAPI.isSuccess(txResponse)) {
+					const txData = tauriWalletAPI.unwrap(txResponse);
+					const txResult = JSON.parse(txData.transactions_json);
+					recentTxs = txResult.transactions ?? [];
+				}
 			} else {
 				errorMessage = response.error || 'Failed to fetch balance';
 				currentBalance = 'Error';
@@ -177,9 +188,31 @@
 						<h3 class="text-lg font-bold">Recent Transactions</h3>
 						<p class="text-muted-foreground font-medium">Latest activity</p>
 					</div>
-					<div class="text-center py-8">
-						<span class="text-muted-foreground">No recent transactions</span>
-					</div>
+					{#if isLoading}
+						<div class="text-center py-8">
+							<span class="text-muted-foreground text-sm">Loading...</span>
+						</div>
+					{:else if recentTxs.length > 0}
+						<div class="w-full">
+							<div class="flex items-center justify-between pb-2 border-b border-border">
+								<span class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Status</span>
+								<span class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Amount</span>
+							</div>
+							{#each recentTxs as tx}
+								{@const isSent = tx.sender === walletAddress}
+								<div class="flex items-center justify-between py-2 border-b border-border last:border-0">
+									<p class="text-sm font-medium">{isSent ? 'Sent' : 'Received'}</p>
+									<p class="text-sm font-bold {isSent ? 'text-red-500' : 'text-green-500'}">
+										{isSent ? '-' : '+'}{formatAmount(tx.amount)} ZEI
+									</p>
+								</div>
+							{/each}
+						</div>
+					{:else}
+						<div class="text-center py-8">
+							<span class="text-muted-foreground text-sm">No recent transactions</span>
+						</div>
+					{/if}
 				</div>
 				<div class="bg-card border rounded-xl p-6 hover:shadow-md transition-shadow">
 					<div class="space-y-1 mb-4">
@@ -194,10 +227,11 @@
 				<div class="bg-card border rounded-xl p-6 hover:shadow-md transition-shadow">
 					<div class="space-y-1 mb-4">
 						<h3 class="text-lg font-bold">L2 Messages</h3>
-						<p class="text-muted-foreground font-medium">Enhanced messaging</p>
+						<p class="text-muted-foreground font-medium">Send notes with transactions</p>
 					</div>
-					<div class="text-center py-8">
-						<span class="text-muted-foreground">Feature coming soon</span>
+					<div class="space-y-2">
+						<Button class="w-full" onclick={() => window.location.href = '/messages/compose'}>Compose Message</Button>
+						<Button variant="outline" class="w-full" onclick={() => window.location.href = '/messages'}>View Messages</Button>
 					</div>
 				</div>
 			</div>

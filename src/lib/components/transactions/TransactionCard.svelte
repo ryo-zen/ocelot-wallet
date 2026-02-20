@@ -60,7 +60,7 @@
 				{#if transaction.message}
 					<div class="space-y-1">
 						<span class="text-muted-foreground font-medium text-sm">Message</span>
-						<p class="text-sm font-medium">"{transaction.message}"</p>
+						<p class="text-sm italic border-l-2 border-muted-foreground/30 pl-2">{transaction.message}</p>
 					</div>
 				{/if}
 				{#if transaction.category}

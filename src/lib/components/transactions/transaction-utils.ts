@@ -99,8 +99,8 @@ export interface Transaction {
 	status: 'confirmed' | 'pending' | 'failed' | 'draft';
 	timestamp?: string | number;
 	created_at?: string | number;
-	message?: string;
-	category?: string;
+	message?: string | null;
+	category?: string | null;
 	confirmations?: number;
 }
 
