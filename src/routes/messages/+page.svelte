@@ -7,6 +7,7 @@
 	import MessageSquareIcon from "@lucide/svelte/icons/message-square";
 	import InboxIcon from "@lucide/svelte/icons/inbox";
 	import { authStore } from '$lib/stores/auth.js';
+	import { addressBookStore } from '$lib/stores/address-book.js';
 	import { serverConfigStore } from '$lib/stores/server-config.js';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
@@ -18,11 +19,30 @@
 	let errorMessage = $state('');
 	let isAuthenticated = $state(false);
 	let currentAddress = $state('');
+	let walletName = $state('');
+	let addressBookEntries: { name: string; address: string }[] = $state([]);
 
 	authStore.subscribe(state => {
 		isAuthenticated = state.isAuthenticated;
 		currentAddress = state.address || '';
+		walletName = state.wallet || '';
 	});
+
+	addressBookStore.subscribe(state => {
+		addressBookEntries = state.entries;
+	});
+
+	function resolveAddress(address: string): { name: string | null; address: string } {
+		if (!address) return { name: null, address: '' };
+		if (address === currentAddress) return { name: walletName || null, address };
+		const entry = addressBookEntries.find(e => e.address === address);
+		return { name: entry?.name ?? null, address };
+	}
+
+	function truncateAddress(address: string): string {
+		if (address.length <= 20) return address;
+		return `${address.slice(0, 12)}...${address.slice(-6)}`;
+	}
 
 	async function loadMessages() {
 		if (!isAuthenticated) return;
@@ -141,15 +161,35 @@
 				</div>
 			{:else}
 				<div class="space-y-3">
-					{#each messages as tx}
+					{#each messages as tx (tx.hash ?? tx.tx_hash ?? tx.id)}
+						{@const from = resolveAddress(tx.sender || '')}
+						{@const to = resolveAddress(tx.recipient)}
+						{@const isSent = tx.sender === currentAddress}
 						<div class="bg-card border rounded-xl p-4 space-y-3">
-							<div class="space-y-1">
-								<span class="text-muted-foreground font-medium text-sm">From</span>
-								<p class="font-mono text-sm break-all">{tx.sender || 'Unknown'}</p>
-							</div>
-							<div class="space-y-1">
-								<span class="text-muted-foreground font-medium text-sm">To</span>
-								<p class="font-mono text-sm break-all">{tx.recipient}</p>
+							<div class="flex items-start justify-between gap-3">
+								<div class="space-y-3 flex-1 min-w-0">
+									<div class="space-y-0.5">
+										<span class="text-muted-foreground font-medium text-sm">From</span>
+										{#if from.name}
+											<p class="text-sm font-medium">{from.name}</p>
+											<p class="font-mono text-xs text-muted-foreground italic" title={from.address}>{truncateAddress(from.address)}</p>
+										{:else}
+											<p class="font-mono text-sm break-all">{from.address || 'Unknown'}</p>
+										{/if}
+									</div>
+									<div class="space-y-0.5">
+										<span class="text-muted-foreground font-medium text-sm">To</span>
+										{#if to.name}
+											<p class="text-sm font-medium">{to.name}</p>
+											<p class="font-mono text-xs text-muted-foreground italic" title={to.address}>{truncateAddress(to.address)}</p>
+										{:else}
+											<p class="font-mono text-sm break-all">{to.address}</p>
+										{/if}
+									</div>
+								</div>
+								<span class="shrink-0 text-xs font-medium px-2 py-0.5 rounded-full {isSent ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'}">
+									{isSent ? 'Sent' : 'Received'}
+								</span>
 							</div>
 							<div class="space-y-1">
 								<span class="text-muted-foreground font-medium text-sm">Message</span>

@@ -63,6 +63,8 @@ pub fn run() {
       commands::restore_from_plaintext_backup,
       commands::call_faucet,
       commands::send_l2_message,
+      commands::get_contacts,
+      commands::save_contacts,
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");

@@ -10,6 +10,7 @@
 	import { onMount } from "svelte";
 
 	// Send components
+	import { addressBookStore } from '$lib/stores/address-book.js';
 	import SendForm from '$lib/components/send/SendForm.svelte';
 	import ConfirmDialog from '$lib/components/send/ConfirmDialog.svelte';
 	import { sendTransaction, validateTransaction, type TransactionData } from '$lib/components/send/send-transaction.js';
@@ -33,6 +34,7 @@
 		}
 
 		getBalance();
+		addressBookStore.init();
 	});
 
 	async function getBalance() {

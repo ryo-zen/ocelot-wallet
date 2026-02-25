@@ -14,7 +14,7 @@
 	<div class="flex justify-between items-start mb-4">
 		<div class="space-y-1">
 			<h3 class="text-lg font-bold">
-				Block #{transaction.block_height || 'Pending'}
+				{transaction.block_height != null ? `Block No. ${transaction.block_height - 1}` : 'Pending'}
 			</h3>
 			<p class="text-muted-foreground font-medium">
 				{transaction.sender === currentAddress ? 'Sent' : 'Received'} {formatAmount(transaction.amount)} ZEI

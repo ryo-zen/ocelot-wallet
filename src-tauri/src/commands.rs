@@ -279,21 +279,24 @@ pub fn send_transaction(
         sender_public_key: hex::encode(sender_public_key_bytes),
     };
 
-    // Debug: Log transaction details
-    eprintln!("Transaction details:");
-    eprintln!("  Sender: {}", sender_address);
-    eprintln!("  Recipient: {}", recipient);
-    eprintln!("  Amount: {}", amount);
-    eprintln!("  Fee: {}", fee);
-    eprintln!("  Nonce: {}", nonce);
-    eprintln!("  Timestamp: {}", timestamp);
-    eprintln!("  Expiry Height: {}", expiry_height);
-    eprintln!("  Current Height: {}", current_height);
-    eprintln!("  Signature: {}", signature);
-    eprintln!("  Sender Public Key: {}", hex::encode(sender_public_key_bytes));
-    eprintln!("  TX hash (for signing): {}", hex::encode(&tx_hash_bytes));
-    eprintln!("  TX data length: {} bytes", tx_data.len());
-    eprintln!("  TX data (hex): {}", hex::encode(&tx_data));
+    // Debug logging — dev builds only, stripped from release
+    #[cfg(debug_assertions)]
+    {
+        eprintln!("Transaction details:");
+        eprintln!("  Sender: {}", sender_address);
+        eprintln!("  Recipient: {}", recipient);
+        eprintln!("  Amount: {}", amount);
+        eprintln!("  Fee: {}", fee);
+        eprintln!("  Nonce: {}", nonce);
+        eprintln!("  Timestamp: {}", timestamp);
+        eprintln!("  Expiry Height: {}", expiry_height);
+        eprintln!("  Current Height: {}", current_height);
+        eprintln!("  Signature: {}", signature);
+        eprintln!("  Sender Public Key: {}", hex::encode(sender_public_key_bytes));
+        eprintln!("  TX hash (for signing): {}", hex::encode(&tx_hash_bytes));
+        eprintln!("  TX data length: {} bytes", tx_data.len());
+        eprintln!("  TX data (hex): {}", hex::encode(&tx_data));
+    }
 
     // Submit transaction via JSON-RPC
     match api.submit_transaction(signed_tx) {
@@ -680,6 +683,52 @@ pub fn restore_from_plaintext_backup(
         }),
         Err(e) => CommandResponse::error(format!("Failed to restore wallet: {}", e)),
     }
+}
+
+fn get_contacts_path() -> std::path::PathBuf {
+    if let Ok(home) = std::env::var("HOME") {
+        if home.contains("/tmp") || home.contains("\\Temp\\") {
+            return std::path::PathBuf::from(home).join(".zeicoin-wallet/contacts.json");
+        }
+    }
+    dirs::data_dir()
+        .expect("Failed to get data directory")
+        .join("zeicoin-wallet")
+        .join("contacts.json")
+}
+
+#[tauri::command]
+pub fn get_contacts() -> CommandResponse<String> {
+    let path = get_contacts_path();
+    if !path.exists() {
+        return CommandResponse::success("[]".to_string());
+    }
+    match std::fs::read_to_string(&path) {
+        Ok(data) => CommandResponse::success(data),
+        Err(e) => CommandResponse::error(format!("Failed to read contacts: {}", e)),
+    }
+}
+
+#[tauri::command]
+pub fn save_contacts(contacts_json: String) -> CommandResponse<String> {
+    let path = get_contacts_path();
+    if let Some(parent) = path.parent() {
+        if let Err(e) = std::fs::create_dir_all(parent) {
+            return CommandResponse::error(format!("Failed to create directory: {}", e));
+        }
+    }
+    if let Err(e) = std::fs::write(&path, &contacts_json) {
+        return CommandResponse::error(format!("Failed to write contacts: {}", e));
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let perms = std::fs::Permissions::from_mode(0o600);
+        if let Err(e) = std::fs::set_permissions(&path, perms) {
+            return CommandResponse::error(format!("Failed to set permissions: {}", e));
+        }
+    }
+    CommandResponse::success("ok".to_string())
 }
 
 #[cfg(test)]

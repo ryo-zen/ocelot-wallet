@@ -27,10 +27,28 @@
 	let success = $state('');
 	let isAuthenticated = $state(false);
 	let showContactPicker = $state(false);
+	let walletName = $state('');
+	let currentAddress = $state('');
+	let addressBookEntries: { name: string; address: string }[] = $state([]);
 
 	authStore.subscribe(state => {
 		isAuthenticated = state.isAuthenticated;
+		walletName = state.wallet || '';
+		currentAddress = state.address || '';
 	});
+
+	addressBookStore.subscribe(state => {
+		addressBookEntries = state.entries;
+	});
+
+	let resolvedContact = $derived(
+		addressBookEntries.find(e => e.address === recipient.trim()) ?? null
+	);
+
+	function truncateAddress(address: string): string {
+		if (address.length <= 20) return address;
+		return `${address.slice(0, 12)}...${address.slice(-6)}`;
+	}
 
 	function handleContactSelect(address: string, contactId: string) {
 		recipient = address;
@@ -42,6 +60,7 @@
 		if (!isAuthenticated) {
 			return goto('/login');
 		}
+		addressBookStore.init();
 	});
 
 	async function handleSend(e: Event) {
@@ -135,7 +154,15 @@
 					{/if}
 
 					<div class="space-y-2">
-						<Label for="recipient">Recipient Address</Label>
+						<Label>From</Label>
+						<div class="rounded-md border bg-muted/50 px-3 py-2.5">
+							<p class="text-sm font-medium">{walletName}</p>
+							<p class="font-mono text-xs text-muted-foreground italic" title={currentAddress}>{truncateAddress(currentAddress)}</p>
+						</div>
+					</div>
+
+					<div class="space-y-2">
+						<Label for="recipient">To</Label>
 						<div class="flex gap-2">
 							<Input
 								id="recipient"
@@ -156,9 +183,16 @@
 								<BookUserIcon class="size-4" />
 							</Button>
 						</div>
-						<p class="text-sm text-muted-foreground">
-							Enter the ZeiCoin address of the recipient
-						</p>
+						{#if resolvedContact}
+							<p class="text-xs text-muted-foreground">
+								<span class="font-medium text-foreground">{resolvedContact.name}</span>
+								<span class="italic ml-1">{truncateAddress(recipient.trim())}</span>
+							</p>
+						{:else}
+							<p class="text-sm text-muted-foreground">
+								Enter the ZeiCoin address of the recipient
+							</p>
+						{/if}
 					</div>
 
 					<div class="space-y-2">

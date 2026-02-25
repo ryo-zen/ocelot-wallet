@@ -19,6 +19,7 @@
 	import SearchIcon from "@lucide/svelte/icons/search";
 	import { addressBookStore, type AddressBookEntry } from '$lib/stores/address-book.js';
 	import { goto } from '$app/navigation';
+	import { onMount } from 'svelte';
 
 	const categoryOptions = [
 		{ value: 'friends', label: 'Friends' },
@@ -32,6 +33,10 @@
 	let addressBook = $state({ entries: [] });
 	addressBookStore.subscribe(state => {
 		addressBook = state;
+	});
+
+	onMount(() => {
+		addressBookStore.init();
 	});
 
 	let isAddDialogOpen = $state(false);
