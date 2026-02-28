@@ -271,14 +271,14 @@ impl Wallet {
         if let Ok(home) = std::env::var("HOME") {
             if home.contains("/tmp") || home.contains("\\Temp\\") {
                 // Test mode - use temp directory
-                return PathBuf::from(home).join(".zeicoin-wallet/wallets");
+                return PathBuf::from(home).join(".ocelot-wallet/wallets");
             }
         }
 
         // Production mode - use OS-standard app data directory
         let app_dir = dirs::data_dir()
             .expect("Failed to get app data directory")
-            .join("zeicoin-wallet");
+            .join("ocelot-wallet");
         app_dir.join("wallets")
     }
 

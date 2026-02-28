@@ -21,7 +21,7 @@
 
 	let isAuthenticated = false;
 	let walletAddress = $state('');
-	let selectedServerId = $state('sydney-production');
+	let selectedServerId = $state('zei-testnet');
 	let currentServerUrl = $state('');
 	let currentRpcUrl = $state('');
 	let saveMessage = $state('');
@@ -316,15 +316,6 @@
 							</div>
 						</div>
 
-						<div class="pt-2 border-t border-border">
-							<div class="flex items-center justify-between">
-								<div>
-									<p class="text-sm font-medium">Wallet Backend</p>
-									<p class="text-xs text-muted-foreground font-mono mt-1">Tauri (Rust)</p>
-								</div>
-								<span class="text-xs text-green-600 dark:text-green-400">Active</span>
-							</div>
-						</div>
 					</div>
 				</div>
 

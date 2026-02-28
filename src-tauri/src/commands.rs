@@ -688,12 +688,12 @@ pub fn restore_from_plaintext_backup(
 fn get_contacts_path() -> std::path::PathBuf {
     if let Ok(home) = std::env::var("HOME") {
         if home.contains("/tmp") || home.contains("\\Temp\\") {
-            return std::path::PathBuf::from(home).join(".zeicoin-wallet/contacts.json");
+            return std::path::PathBuf::from(home).join(".ocelot-wallet/contacts.json");
         }
     }
     dirs::data_dir()
         .expect("Failed to get data directory")
-        .join("zeicoin-wallet")
+        .join("ocelot-wallet")
         .join("contacts.json")
 }
 

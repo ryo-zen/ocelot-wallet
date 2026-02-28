@@ -18,12 +18,12 @@ export interface ServerOption {
 
 export const availableServers: ServerOption[] = [
 	{
-		id: 'sydney-production',
-		name: 'Sydney Production Server (HTTPS)',
+		id: 'zei-testnet',
+		name: 'zei.network',
 		url: 'https://api.zei.network',
 		rpcUrl: 'https://rpc.zei.network',
-		description: 'Main production server with TLS 1.3 encryption',
-		type: 'production'
+		description: 'ZeiCoin testnet — api.zei.network',
+		type: 'testnet'
 	},
 	{
 		id: 'local-testnet',
@@ -50,9 +50,9 @@ interface ServerConfigState {
 
 const STORAGE_KEY = 'zeicoin_server_config';
 
-// Default to Sydney production server
+// Default to zei.network testnet
 const defaultState: ServerConfigState = {
-	selectedServerId: 'sydney-production',
+	selectedServerId: 'zei-testnet',
 	customServerUrl: null
 };
 
@@ -151,7 +151,7 @@ function createServerConfigStore() {
 				}
 			}
 
-			// Fallback to default (Dallas production)
+			// Fallback to default (zei.network testnet)
 			return availableServers[0].url;
 		},
 
@@ -175,7 +175,7 @@ function createServerConfigStore() {
 				}
 			}
 
-			// Fallback to default (Dallas production)
+			// Fallback to default (zei.network testnet)
 			return availableServers[0].rpcUrl;
 		},
 

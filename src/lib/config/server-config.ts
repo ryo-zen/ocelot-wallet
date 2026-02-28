@@ -33,7 +33,7 @@ function getUserSelectedServerUrl(): string | null {
 
       // Map server IDs to URLs (HTTPS for production security)
       const serverUrls: Record<string, string> = {
-        'sydney-production': 'https://api.zei.network',
+        'zei-testnet': 'https://api.zei.network',
         'local-testnet': 'http://127.0.0.1:10802',
         'local-mainnet': 'http://127.0.0.1:3000'
       };
