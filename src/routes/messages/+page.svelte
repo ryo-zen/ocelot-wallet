@@ -69,6 +69,8 @@
 	let pollInterval: ReturnType<typeof setInterval>;
 	let isInitialLoad = $state(true);
 	let chatContainer: HTMLElement;
+	let knownIds = new Set<string>();
+	let newMessageIds = $state(new Set<string>());
 
 	authStore.subscribe(state => {
 		isAuthenticated = state.isAuthenticated;
@@ -160,7 +162,19 @@
 							Number(a.timestamp ?? a.created_at ?? 0) -
 							Number(b.timestamp ?? b.created_at ?? 0)
 					);
-					messages = [...dbSorted, ...pendingTxs];
+					const allMessages = [...dbSorted, ...pendingTxs];
+				if (isInitialLoad) {
+					allMessages.forEach(tx => knownIds.add(tx.hash ?? tx.tx_hash ?? tx.id ?? ''));
+					newMessageIds = new Set();
+				} else {
+					const freshIds = new Set<string>();
+					allMessages.forEach(tx => {
+						const id = tx.hash ?? tx.tx_hash ?? tx.id ?? '';
+						if (!knownIds.has(id)) { freshIds.add(id); knownIds.add(id); }
+					});
+					newMessageIds = freshIds;
+				}
+				messages = allMessages;
 				}
 			} else {
 				errorMessage = response.error || 'Failed to load messages';
@@ -189,23 +203,48 @@
 		const credentials = authStore.getCredentials();
 		if (!credentials.wallet || !credentials.password) { sendError = 'Not authenticated'; return; }
 		isSending = true;
+
+		// Show the bubble immediately before the network call resolves
+		const optimisticId = crypto.randomUUID();
+		const optimisticTx: Transaction = {
+			id: optimisticId,
+			sender: currentAddress,
+			recipient: recipient.trim(),
+			amount: 0.00005,
+			message: message.trim(),
+			timestamp: Date.now(),
+			status: 'pending' as const,
+		};
+		messages = [...messages, optimisticTx];
+		newMessageIds = new Set([optimisticId]);
+		knownIds.add(optimisticId);
+		const sentMessage = message.trim();
+		const sentRecipient = recipient.trim();
+		message = '';
+
+		// Wait for the animation (400ms) to finish before starting the IPC call,
+		// so the network call doesn't block the thread mid-animation
+		await new Promise(r => setTimeout(r, 420));
+		newMessageIds = new Set();
+
 		const result = await sendTransaction(
 			{ wallet: credentials.wallet, password: credentials.password },
-			{ recipient: recipient.trim(), amount: DUST_AMOUNT, message: message.trim() }
+			{ recipient: sentRecipient, amount: DUST_AMOUNT, message: sentMessage }
 		);
 		if (result.success) {
 			const entry: PendingEntry = {
-				id: crypto.randomUUID(),
+				id: optimisticId,
 				sender: currentAddress,
-				recipient: recipient.trim(),
-				message: message.trim(),
+				recipient: sentRecipient,
+				message: sentMessage,
 				sentAt: Date.now(),
 			};
 			savePending(currentAddress, [...loadPending(currentAddress), entry]);
-			message = '';
 			authStore.refreshSession();
-			await loadMessages();
 		} else {
+			// Roll back the optimistic bubble on failure
+			messages = messages.filter(tx => tx.id !== optimisticId);
+			message = sentMessage;
 			sendError = result.error || 'Failed to send message';
 		}
 		isSending = false;
@@ -229,7 +268,7 @@
 
 <Sidebar.Provider>
 	<AppSidebar />
-	<Sidebar.Inset class="flex flex-col overflow-hidden">
+	<Sidebar.Inset class="flex flex-col overflow-hidden h-screen">
 		<header class="group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear border-b">
 			<div class="flex items-center gap-2 px-4">
 				<Sidebar.Trigger class="-ml-1" />
@@ -271,7 +310,8 @@
 						{@const isSentByMe = tx.sender === currentAddress}
 						{@const senderName = resolveName(tx.sender || '')}
 						{#if isSentByMe}
-							<div class="flex justify-end">
+							{@const isNew = newMessageIds.has(tx.hash ?? tx.tx_hash ?? tx.id ?? '')}
+							<div class="flex justify-end {isNew ? 'bubble-sent' : ''}">
 								<div class="max-w-xs lg:max-w-md space-y-1">
 									<div class="bg-primary text-primary-foreground rounded-2xl rounded-br-sm px-4 py-2.5">
 										<p class="text-sm">{tx.message}</p>
@@ -287,7 +327,8 @@
 								</div>
 							</div>
 						{:else}
-							<div class="flex items-end gap-2">
+							{@const isNew = newMessageIds.has(tx.hash ?? tx.tx_hash ?? tx.id ?? '')}
+							<div class="flex items-end gap-2 {isNew ? 'bubble-received' : ''}">
 								<div class="bg-muted text-muted-foreground rounded-full w-8 h-8 flex items-center justify-center text-xs font-semibold shrink-0">
 									{getInitial(tx.sender || '')}
 								</div>
@@ -345,3 +386,27 @@
 	onSelect={handleContactSelect}
 	onClose={() => showContactPicker = false}
 />
+
+<style>
+	@keyframes pop-sent {
+		0%   { transform: scale(0.3); opacity: 0; transform-origin: right bottom; }
+		60%  { transform: scale(1.12); opacity: 1; transform-origin: right bottom; }
+		80%  { transform: scale(0.95); transform-origin: right bottom; }
+		100% { transform: scale(1);   transform-origin: right bottom; }
+	}
+
+	@keyframes pop-received {
+		0%   { transform: scale(0.3); opacity: 0; transform-origin: left bottom; }
+		60%  { transform: scale(1.12); opacity: 1; transform-origin: left bottom; }
+		80%  { transform: scale(0.95); transform-origin: left bottom; }
+		100% { transform: scale(1);   transform-origin: left bottom; }
+	}
+
+	.bubble-sent {
+		animation: pop-sent 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+	}
+
+	.bubble-received {
+		animation: pop-received 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+	}
+</style>
