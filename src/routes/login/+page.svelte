@@ -1,5 +1,6 @@
 <script lang="ts">
 	import LoginForm from "$lib/components/login-form.svelte";
+	import OcelotLogo from "$lib/components/ocelot-logo.svelte";
 </script>
 
 <svelte:head>
@@ -10,7 +11,7 @@
 	<div class="flex flex-col gap-4 p-6 md:p-10">
 		<div class="flex justify-center gap-2 md:justify-start">
 			<a href="/" class="flex items-center gap-2 font-medium">
-				<img src="/ocelot-logo.png" alt="Ocelot Wallet" class="size-8 rounded-lg" />
+				<OcelotLogo class="size-8 text-primary" />
 				Ocelot Wallet
 			</a>
 		</div>

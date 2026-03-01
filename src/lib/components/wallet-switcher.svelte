@@ -5,6 +5,7 @@
 	import ChevronsUpDownIcon from "@lucide/svelte/icons/chevrons-up-down";
 	import PlusIcon from "@lucide/svelte/icons/plus";
 	import WalletIcon from "@lucide/svelte/icons/wallet";
+	import OcelotLogo from './ocelot-logo.svelte';
 	import { authStore } from '$lib/stores/auth.js';
 	import { tauriWalletAPI } from '$lib/services/tauri-wallet-api.js';
 	import { onMount } from 'svelte';
@@ -17,13 +18,11 @@
 	let isLoading = $state(true);
 
 	onMount(async () => {
-		// Get current wallet from auth store
 		const authState = authStore.getCredentials();
 		if (authState.isAuthenticated && authState.wallet) {
 			currentWallet = authState.wallet;
 		}
 
-		// Fetch all available wallets
 		const response = await tauriWalletAPI.listWallets();
 		if (tauriWalletAPI.isSuccess(response)) {
 			const data = tauriWalletAPI.unwrap(response);
@@ -34,8 +33,6 @@
 
 	async function switchWallet(walletName: string) {
 		if (walletName === currentWallet) return;
-
-		// Logout and redirect to login with the selected wallet
 		authStore.logout();
 		goto(`/login?wallet=${encodeURIComponent(walletName)}`);
 	}
@@ -50,26 +47,27 @@
 		<DropdownMenu.Root>
 			<DropdownMenu.Trigger>
 				{#snippet child({ props })}
-					<Sidebar.MenuButton
+					<button
 						{...props}
-						size="lg"
-						class="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+						class="flex w-full flex-col items-center rounded-md px-2 py-3 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:py-2"
 					>
-						<img src="/ocelot-logo.png" alt="Ocelot Wallet" class="aspect-square size-8 rounded-lg" />
-						<div class="grid flex-1 text-left text-sm leading-tight">
-							<span class="truncate font-medium">
-								{#if isLoading}
-									Loading...
-								{:else if currentWallet}
-									{currentWallet}
-								{:else}
-									No Wallet
-								{/if}
-							</span>
-							<span class="truncate text-xs">Current Wallet</span>
+						<OcelotLogo class="size-16 text-primary group-data-[collapsible=icon]:size-6" />
+						<div class="mt-2 flex w-full items-center gap-2 group-data-[collapsible=icon]:hidden">
+							<div class="grid flex-1 text-left text-sm leading-tight">
+								<span class="truncate font-medium">
+									{#if isLoading}
+										Loading...
+									{:else if currentWallet}
+										{currentWallet}
+									{:else}
+										No Wallet
+									{/if}
+								</span>
+								<span class="truncate text-xs text-muted-foreground">Current Wallet</span>
+							</div>
+							<ChevronsUpDownIcon class="size-4 shrink-0" />
 						</div>
-						<ChevronsUpDownIcon class="ml-auto" />
-					</Sidebar.MenuButton>
+					</button>
 				{/snippet}
 			</DropdownMenu.Trigger>
 			<DropdownMenu.Content
@@ -108,9 +106,7 @@
 				{/if}
 				<DropdownMenu.Separator />
 				<DropdownMenu.Item class="gap-2 p-2" onSelect={createNewWallet}>
-					<div
-						class="flex size-6 items-center justify-center rounded-md border bg-transparent"
-					>
+					<div class="flex size-6 items-center justify-center rounded-md border bg-transparent">
 						<PlusIcon class="size-4" />
 					</div>
 					<div class="text-muted-foreground font-medium">Create Wallet</div>

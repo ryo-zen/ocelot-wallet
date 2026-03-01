@@ -228,7 +228,7 @@
 								{@const isSent = tx.sender === walletAddress}
 								<div class="flex items-center justify-between py-2 border-b border-border last:border-0">
 									<p class="text-sm font-medium">{isSent ? 'Sent' : 'Received'}</p>
-									<p class="text-sm font-bold {isSent ? 'text-red-500' : 'text-green-500'}">
+									<p class="text-sm font-bold {isSent ? 'text-destructive' : 'text-primary'}">
 										{isSent ? '-' : '+'}{formatAmount(tx.amount)} ZEI
 									</p>
 								</div>

@@ -17,7 +17,7 @@
 </script>
 
 <svelte:head>
-	<link rel="icon" href="/ocelot-logo.png" />
+	<link rel="icon" href="/ocelot-logo.svg" type="image/svg+xml" />
 </svelte:head>
 
 {@render children?.()}
