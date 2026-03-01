@@ -60,7 +60,6 @@
 	let walletName = $state('');
 	let addressBookEntries: { name: string; address: string }[] = $state([]);
 
-	// Compose state
 	let recipient = $state('');
 	let message = $state('');
 	let isSending = $state(false);
@@ -109,7 +108,6 @@
 	}
 
 	$effect(() => {
-		// depend on messages length to scroll when new messages arrive
 		void messages.length;
 		if (chatContainer) {
 			chatContainer.scrollTop = chatContainer.scrollHeight;
@@ -137,7 +135,6 @@
 					const dbMessages: Transaction[] = result.transactions.filter(
 						(tx: Transaction) => tx.message
 					);
-
 					let pending = loadPending(currentAddress);
 					pending = pending.filter(entry =>
 						!dbMessages.some(
@@ -149,7 +146,6 @@
 						)
 					);
 					savePending(currentAddress, pending);
-
 					const pendingTxs: Transaction[] = pending.map(e => ({
 						id: e.id,
 						sender: e.sender,
@@ -159,7 +155,6 @@
 						timestamp: e.sentAt,
 						status: 'pending' as const,
 					}));
-
 					const dbSorted = [...dbMessages].sort(
 						(a, b) =>
 							Number(a.timestamp ?? a.created_at ?? 0) -
@@ -207,7 +202,6 @@
 				sentAt: Date.now(),
 			};
 			savePending(currentAddress, [...loadPending(currentAddress), entry]);
-
 			message = '';
 			authStore.refreshSession();
 			await loadMessages();
@@ -250,123 +244,98 @@
 			</div>
 		</header>
 
-		<!-- Chat messages -->
-		<div bind:this={chatContainer} class="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
-			{#if isLoading}
-				<div class="flex items-center justify-center h-full">
-					<p class="text-muted-foreground text-sm">Loading messages...</p>
-				</div>
-			{:else if errorMessage}
-				<div class="bg-destructive/10 border border-destructive/20 rounded-xl p-4 text-destructive text-sm font-medium">
-					{errorMessage}
-				</div>
-			{:else if messages.length === 0}
-				<div class="flex flex-col items-center justify-center h-full text-center space-y-4">
-					<div class="rounded-full bg-muted p-6">
-						<InboxIcon class="h-10 w-10 text-muted-foreground" />
-					</div>
-					<div class="space-y-1">
-						<h3 class="text-lg font-semibold">No messages yet</h3>
-						<p class="text-muted-foreground text-sm max-w-xs">
-							Send your first message using the compose bar below.
-						</p>
-					</div>
-				</div>
-			{:else}
-				{#each messages as tx (tx.hash ?? tx.tx_hash ?? tx.id)}
-					{@const isSentByMe = tx.sender === currentAddress}
-					{@const senderName = resolveName(tx.sender || '')}
+		<div class="flex flex-col flex-1 min-h-0 gap-2 p-4">
 
-					{#if isSentByMe}
-						<!-- Sent bubble — right aligned -->
-						<div class="flex justify-end">
-							<div class="max-w-xs lg:max-w-md space-y-1">
-								<div class="bg-primary text-primary-foreground rounded-2xl rounded-br-sm px-4 py-2.5">
-									<p class="text-sm">{tx.message}</p>
-								</div>
-								<div class="flex items-center justify-end gap-1 pr-1">
-									<p class="text-xs text-muted-foreground">
-										{formatDate(tx.timestamp || tx.created_at)}
-									</p>
-									{#if tx.status === 'confirmed' || tx.block_height}
-										<CheckIcon class="size-3 text-muted-foreground" />
-									{:else}
-										<ClockIcon class="size-3 text-muted-foreground/50" />
-									{/if}
-								</div>
-							</div>
+			<!-- Message canvas -->
+			<div bind:this={chatContainer} class="flex-1 overflow-y-auto min-h-0 bg-card border rounded-xl p-4 space-y-4">
+				{#if isLoading}
+					<div class="flex items-center justify-center h-full">
+						<p class="text-muted-foreground text-sm">Loading messages...</p>
+					</div>
+				{:else if errorMessage}
+					<div class="bg-destructive/10 border border-destructive/20 rounded-xl p-4 text-destructive text-sm font-medium">
+						{errorMessage}
+					</div>
+				{:else if messages.length === 0}
+					<div class="flex flex-col items-center justify-center h-full text-center space-y-4">
+						<div class="rounded-full bg-muted p-6">
+							<InboxIcon class="h-10 w-10 text-muted-foreground" />
 						</div>
-					{:else}
-						<!-- Received bubble — left aligned with avatar -->
-						<div class="flex items-end gap-2">
-							<div class="bg-muted text-muted-foreground rounded-full w-8 h-8 flex items-center justify-center text-xs font-semibold shrink-0">
-								{getInitial(tx.sender || '')}
-							</div>
-							<div class="max-w-xs lg:max-w-md space-y-1">
-								<p class="text-xs text-muted-foreground pl-1 font-medium">
-									{senderName ?? truncateAddress(tx.sender || '')}
-								</p>
-								<div class="bg-muted text-foreground rounded-2xl rounded-bl-sm px-4 py-2.5">
-									<p class="text-sm">{tx.message}</p>
-								</div>
-								<div class="flex items-center gap-1 pl-1">
-									<p class="text-xs text-muted-foreground">
-										{formatDate(tx.timestamp || tx.created_at)}
-									</p>
-									{#if tx.status === 'confirmed' || tx.block_height}
-										<CheckIcon class="size-3 text-muted-foreground" />
-									{:else}
-										<ClockIcon class="size-3 text-muted-foreground/50" />
-									{/if}
-								</div>
-							</div>
+						<div class="space-y-1">
+							<h3 class="text-lg font-semibold">No messages yet</h3>
+							<p class="text-muted-foreground text-sm max-w-xs">Send your first message using the compose bar below.</p>
 						</div>
-					{/if}
-				{/each}
-			{/if}
-		</div>
+					</div>
+				{:else}
+					{#each messages as tx (tx.hash ?? tx.tx_hash ?? tx.id)}
+						{@const isSentByMe = tx.sender === currentAddress}
+						{@const senderName = resolveName(tx.sender || '')}
+						{#if isSentByMe}
+							<div class="flex justify-end">
+								<div class="max-w-xs lg:max-w-md space-y-1">
+									<div class="bg-primary text-primary-foreground rounded-2xl rounded-br-sm px-4 py-2.5">
+										<p class="text-sm">{tx.message}</p>
+									</div>
+									<div class="flex items-center justify-end gap-1 pr-1">
+										<p class="text-xs text-muted-foreground">{formatDate(tx.timestamp || tx.created_at)}</p>
+										{#if tx.status === 'confirmed' || tx.block_height}
+											<CheckIcon class="size-3 text-muted-foreground" />
+										{:else}
+											<ClockIcon class="size-3 text-muted-foreground/50" />
+										{/if}
+									</div>
+								</div>
+							</div>
+						{:else}
+							<div class="flex items-end gap-2">
+								<div class="bg-muted text-muted-foreground rounded-full w-8 h-8 flex items-center justify-center text-xs font-semibold shrink-0">
+									{getInitial(tx.sender || '')}
+								</div>
+								<div class="max-w-xs lg:max-w-md space-y-1">
+									<p class="text-xs text-muted-foreground pl-1 font-medium">
+										{senderName ?? truncateAddress(tx.sender || '')}
+									</p>
+									<div class="bg-muted text-foreground rounded-2xl rounded-bl-sm px-4 py-2.5">
+										<p class="text-sm">{tx.message}</p>
+									</div>
+									<div class="flex items-center gap-1 pl-1">
+										<p class="text-xs text-muted-foreground">{formatDate(tx.timestamp || tx.created_at)}</p>
+										{#if tx.status === 'confirmed' || tx.block_height}
+											<CheckIcon class="size-3 text-muted-foreground" />
+										{:else}
+											<ClockIcon class="size-3 text-muted-foreground/50" />
+										{/if}
+									</div>
+								</div>
+							</div>
+						{/if}
+					{/each}
+				{/if}
+			</div>
 
-		<!-- Compose bar -->
-		<div class="border-t bg-background p-3 shrink-0">
-			{#if sendError}
-				<p class="text-destructive text-xs mb-2 px-1">{sendError}</p>
-			{/if}
-			<form onsubmit={handleSend} class="space-y-2">
-				<div class="flex gap-2">
-					<Input
-						type="text"
-						placeholder="To: tzei1..."
-						bind:value={recipient}
-						disabled={isSending}
-						class="font-mono text-sm flex-1"
-					/>
+			<!-- Compose area -->
+			<form onsubmit={handleSend} class="bg-card border rounded-xl shrink-0">
+				{#if sendError}
+					<p class="text-destructive text-xs px-3 pt-2">{sendError}</p>
+				{/if}
+				<div class="flex gap-2 px-3 py-2">
+					<Input type="text" placeholder="To: tzei1..." bind:value={recipient} disabled={isSending} class="font-mono text-sm flex-1" />
 					{#if resolvedRecipient}
 						<span class="text-xs text-muted-foreground self-center shrink-0">{resolvedRecipient.name}</span>
 					{/if}
-					<Button
-						type="button"
-						variant="outline"
-						size="icon"
-						onclick={() => showContactPicker = true}
-						disabled={isSending}
-						title="Select from address book"
-					>
+					<Button type="button" variant="outline" size="icon" onclick={() => showContactPicker = true} disabled={isSending} title="Select from address book">
 						<BookUserIcon class="size-4" />
 					</Button>
 				</div>
-				<div class="flex gap-2">
-					<Input
-						type="text"
-						placeholder="Write a message..."
-						bind:value={message}
-						disabled={isSending}
-						class="flex-1"
-					/>
+				<Separator />
+				<div class="flex gap-2 px-3 py-2">
+					<Input type="text" placeholder="Write a message..." bind:value={message} disabled={isSending} class="flex-1" />
 					<Button type="submit" size="icon" disabled={isSending || !recipient.trim() || !message.trim()}>
 						<SendIcon class="size-4" />
 					</Button>
 				</div>
 			</form>
+
 		</div>
 	</Sidebar.Inset>
 </Sidebar.Provider>
