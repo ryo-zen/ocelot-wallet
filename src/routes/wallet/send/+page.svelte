@@ -8,6 +8,7 @@
 	import { serverConfigStore } from "$lib/stores/server-config.js";
 	import { get } from "svelte/store";
 	import { onMount } from "svelte";
+	import { afterNavigate } from '$app/navigation';
 
 	// Send components
 	import { addressBookStore } from '$lib/stores/address-book.js';
@@ -25,14 +26,14 @@
 	let showConfirmDialog = $state(false);
 	let currentBalance = $state('0');
 
-	onMount(() => {
-		// Read URL parameters
-		const urlParams = new URLSearchParams(window.location.search);
-		const toParam = urlParams.get('to');
+	afterNavigate(({ to }) => {
+		const toParam = to?.url.searchParams.get('to');
 		if (toParam) {
 			recipient = toParam;
 		}
+	});
 
+	onMount(() => {
 		getBalance();
 		addressBookStore.init();
 	});

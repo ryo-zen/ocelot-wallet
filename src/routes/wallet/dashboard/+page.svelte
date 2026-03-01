@@ -10,6 +10,17 @@
 	import { tauriWalletAPI } from '$lib/services/tauri-wallet-api.js';
 	import { serverConfigStore } from '$lib/stores/server-config.js';
 	import { formatAmount, type Transaction } from '$lib/components/transactions/transaction-utils.js';
+	import CopyIcon from "@lucide/svelte/icons/copy";
+	import CheckIcon from "@lucide/svelte/icons/check";
+
+	let copied = $state(false);
+
+	function copyAddress() {
+		if (!walletAddress) return;
+		navigator.clipboard.writeText(walletAddress);
+		copied = true;
+		setTimeout(() => { copied = false; }, 2000);
+	}
 
 	let currentWallet = $state('');
 	let currentBalance = $state('');
@@ -166,7 +177,22 @@
 						</div>
 						<div class="space-y-1">
 							<span class="text-sm font-medium text-muted-foreground">Wallet Address</span>
-							<p class="font-mono text-sm break-all">{walletAddress || 'Not available'}</p>
+							<div class="flex items-center gap-2">
+								<p class="font-mono text-sm break-all">{walletAddress || 'Not available'}</p>
+								{#if walletAddress}
+									<button
+										onclick={copyAddress}
+										class="shrink-0 rounded-md p-1 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+										title="Copy address"
+									>
+										{#if copied}
+											<CheckIcon class="size-4 text-green-500" />
+										{:else}
+											<CopyIcon class="size-4" />
+										{/if}
+									</button>
+								{/if}
+							</div>
 						</div>
 					</div>
 					<div class="space-y-1 text-right">

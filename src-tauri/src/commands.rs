@@ -933,7 +933,7 @@ mod tests {
             password.to_string(),
             recipient.to_string(),
             amount,
-            "https://209.38.31.77:10804".to_string(),
+            "https://api.zei.network".to_string(),
         );
 
         println!("\n📊 Transaction result:");

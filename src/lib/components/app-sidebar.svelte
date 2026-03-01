@@ -28,16 +28,7 @@
 				title: "Messages",
 				url: "/messages",
 				icon: MessageSquareIcon,
-				items: [
-					{
-						title: "All Messages",
-						url: "/messages",
-					},
-					{
-						title: "Compose",
-						url: "/messages/compose",
-					},
-				],
+				items: [],
 			},
 			{
 				title: "Settings",
