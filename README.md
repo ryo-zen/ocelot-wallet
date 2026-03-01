@@ -1,6 +1,6 @@
 
   <div align="center">   
-    <img width="300" height="300" alt="ocelot-icon-3" src="https://github.com/user-attachments/assets/5f8d2e68-5f2d-46ae-88df-5d432e0a4ae6" />
+    <img width="500" height="500" alt="ocelot-icon-3" src="https://github.com/user-attachments/assets/b4efafe4-b4e5-4cf6-bff2-a90b2e9de150" />
   </div>  
 
 # Ocelot Wallet
