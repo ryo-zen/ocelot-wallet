@@ -43,10 +43,8 @@ A secure non-custodial desktop wallet for ZeiCoin cryptocurrency, built with Sve
 
 ### Prerequisites
 
-- **Bun**: Package manager (or npm/pnpm/yarn)
-- **Rust**: For Tauri backend (install via [rustup](https://rustup.rs/))
-- **Node.js**: v18 or higher
-- **Transaction API**: Running ZeiCoin transaction API with HTTPS (production: https://209.38.31.77:443)
+- **Bun**: Package manager — [install](https://bun.sh)
+- **Rust**: For Tauri backend — [install via rustup](https://rustup.rs/)
 
 ### Installation
 
@@ -69,8 +67,8 @@ Create a `.env` file based on `.env.example`:
 ```bash
 # Transaction API endpoint (adjust to your server)
 # Production uses HTTPS with TLS 1.3
-ZEICOIN_SERVER_URL=https://209.38.31.77:443
-PUBLIC_ZEICOIN_SERVER_URL=https://209.38.31.77:443
+ZEICOIN_TRANSACTION_API_URL=https://api.zei.network
+PUBLIC_TRANSACTION_API_URL=https://api.zei.network
 ```
 
 ### Building for Production
@@ -86,10 +84,10 @@ bun tauri build
 
 ```bash
 # Run frontend tests
-npx vitest run
+bunx vitest run
 
 # Run frontend tests in watch mode
-npx vitest watch
+bunx vitest watch
 
 # Run Rust backend tests
 cd src-tauri
@@ -192,7 +190,7 @@ ocelot-wallet/
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](LICENSE) file for details.
 
 ## Contributing
 
