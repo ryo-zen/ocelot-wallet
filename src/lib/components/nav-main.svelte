@@ -1,6 +1,7 @@
 <script lang="ts">
 	import * as Collapsible from "$lib/components/ui/collapsible/index.js";
 	import * as Sidebar from "$lib/components/ui/sidebar/index.js";
+	import { useSidebar } from "$lib/components/ui/sidebar/context.svelte.js";
 	import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
 
 	let {
@@ -19,13 +20,15 @@
 			}[];
 		}[];
 	} = $props();
+
+	const sidebar = useSidebar();
 </script>
 
 <Sidebar.Group>
 	<Sidebar.GroupLabel>Platform</Sidebar.GroupLabel>
 	<Sidebar.Menu>
 		{#each items as item (item.title)}
-			{#if item.items && item.items.length > 0}
+			{#if item.items && item.items.length > 0 && sidebar.state === "expanded"}
 				<Collapsible.Root open={item.isActive} class="group/collapsible">
 					{#snippet child({ props })}
 						<Sidebar.MenuItem {...props}>
@@ -62,16 +65,25 @@
 				</Collapsible.Root>
 			{:else}
 				<Sidebar.MenuItem>
-					<Sidebar.MenuButton tooltipContent={item.title}>
-						{#snippet child({ props })}
-							<a href={item.url} {...props}>
-								{#if item.icon}
-									<item.icon />
-								{/if}
-								<span>{item.title}</span>
-							</a>
-						{/snippet}
-					</Sidebar.MenuButton>
+					{#if sidebar.state === "collapsed" && item.items && item.items.length > 0}
+						<Sidebar.MenuButton tooltipContent={item.title} onclick={() => sidebar.toggle()}>
+							{#if item.icon}
+								<item.icon />
+							{/if}
+							<span>{item.title}</span>
+						</Sidebar.MenuButton>
+					{:else}
+						<Sidebar.MenuButton tooltipContent={item.title}>
+							{#snippet child({ props })}
+								<a href={item.url} {...props}>
+									{#if item.icon}
+										<item.icon />
+									{/if}
+									<span>{item.title}</span>
+								</a>
+							{/snippet}
+						</Sidebar.MenuButton>
+					{/if}
 				</Sidebar.MenuItem>
 			{/if}
 		{/each}

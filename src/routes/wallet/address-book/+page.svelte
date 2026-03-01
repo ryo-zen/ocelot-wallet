@@ -221,14 +221,11 @@
 					{#each filteredEntries as entry (entry.id)}
 						<Card.Root>
 							<Card.Header>
-								<div class="flex items-start justify-between">
-									<div class="flex-1">
-										<Card.Title class="flex items-center gap-2">
-											<BookUserIcon class="size-4" />
-											{entry.name}
-										</Card.Title>
+								<div class="flex items-center justify-between">
+									<div class="flex items-center gap-2">
+										<Card.Title>{entry.name}</Card.Title>
 										{#if entry.category}
-											<Badge variant="outline" class="mt-1">{entry.category}</Badge>
+											<Badge variant="outline">{entry.category}</Badge>
 										{/if}
 									</div>
 								</div>
