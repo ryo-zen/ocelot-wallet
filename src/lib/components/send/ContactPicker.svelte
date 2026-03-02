@@ -50,7 +50,7 @@
 </script>
 
 <Dialog.Root bind:open>
-	<Dialog.Content class="sm:max-w-[600px] max-h-[80vh]">
+	<Dialog.Content class="sm:max-w-[600px] max-h-[80vh] flex flex-col">
 		<Dialog.Header>
 			<Dialog.Title>Select Contact</Dialog.Title>
 			<Dialog.Description>
@@ -70,7 +70,7 @@
 		</div>
 
 		<!-- Contact List -->
-		<div class="overflow-y-auto max-h-[400px] -mx-6 px-6">
+		<div class="overflow-y-auto flex-1 min-h-0 -mx-6 px-6">
 			{#if filteredEntries.length === 0}
 				<div class="py-12 text-center">
 					<BookUserIcon class="mx-auto size-12 text-muted-foreground mb-4" />

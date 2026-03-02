@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { walletCreationStore, type WalletCreationState } from '$lib/stores/wallet-creation.js';
+	import OcelotLogo from '$lib/components/ocelot-logo.svelte';
 	import { validateWalletCreationStep, getStepNumber, TOTAL_STEPS } from '$lib/utils/route-guards.js';
 	import { save } from '@tauri-apps/plugin-dialog';
 	import { invoke } from '@tauri-apps/api/core';
@@ -144,9 +145,7 @@
 	<div class="flex flex-col gap-4 p-6 md:p-10">
 		<div class="flex justify-center gap-2 md:justify-start">
 			<a href="/login" class="flex items-center gap-2 font-medium">
-				<div class="bg-primary text-primary-foreground flex size-6 items-center justify-center rounded-md">
-					🪙
-				</div>
+				<OcelotLogo class="size-6" />
 				Ocelot Wallet
 			</a>
 		</div>
@@ -190,8 +189,8 @@
 							{#each mnemonicGrid as row}
 								<div class="grid grid-cols-3 gap-4">
 									{#each row as wordEntry}
-										<div class="bg-secondary rounded-lg p-3 text-center">
-											<span class="font-mono text-sm">{wordEntry}</span>
+										<div class="bg-secondary rounded-lg p-3 text-center text-secondary-foreground">
+											<span class="font-medium text-sm tracking-wide">{wordEntry}</span>
 										</div>
 									{/each}
 								</div>
@@ -217,8 +216,8 @@
 					{#if storeState}
 					<div class="bg-card border rounded-xl p-4">
 						<div class="space-y-2">
-							<h3 class="font-semibold text-sm">First Wallet Address</h3>
-							<div class="font-mono text-xs break-all bg-secondary rounded p-2">
+							<h3 class="font-semibold text-sm">Your Wallet Address</h3>
+							<div class="font-mono text-xs break-all bg-secondary text-secondary-foreground rounded p-2">
 								{storeState.firstAddress}
 							</div>
 						</div>

@@ -28,7 +28,7 @@
 	let faucetError = $state('');
 	let retryAfterSeconds = $state(0);
 
-	const claimableZei = $derived((Math.min(score, 200) / 100).toFixed(2));
+	const claimableZei = $derived((Math.min(score, 200) / 1000).toFixed(2));
 
 	const GRID = 20;
 	const CELL = 18;
@@ -142,12 +142,13 @@
 	function colors() {
 		const s = getComputedStyle(document.documentElement);
 		return {
-			bg:      s.getPropertyValue('--card').trim(),
-			border:  s.getPropertyValue('--border').trim(),
-			primary: s.getPropertyValue('--primary').trim(),
-			fg:      s.getPropertyValue('--foreground').trim(),
-			muted:   s.getPropertyValue('--muted').trim(),
-			accent:  s.getPropertyValue('--accent').trim(),
+			bg:        s.getPropertyValue('--card').trim(),
+			border:    s.getPropertyValue('--border').trim(),
+			primary:   s.getPropertyValue('--primary').trim(),
+			secondary: s.getPropertyValue('--secondary').trim(),
+			fg:        s.getPropertyValue('--foreground').trim(),
+			muted:     s.getPropertyValue('--muted').trim(),
+			accent:    s.getPropertyValue('--accent').trim(),
 		};
 	}
 
@@ -178,7 +179,7 @@
 		}
 
 		body.forEach((seg, i) => {
-			ctx.fillStyle = i === 0 ? c.primary : c.muted;
+			ctx.fillStyle = i === 0 ? c.primary : c.secondary;
 			ctx.globalAlpha = i === 0 ? 1 : 0.85;
 			ctx.fillRect(seg.x * CELL + 1, seg.y * CELL + 1, CELL - 2, CELL - 2);
 		});

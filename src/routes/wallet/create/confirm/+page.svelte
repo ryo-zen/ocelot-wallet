@@ -5,6 +5,7 @@
 	import { walletCreationStore, type WalletCreationState } from '$lib/stores/wallet-creation.js';
 	import { authStore } from '$lib/stores/auth.js';
 	import { validateWalletCreationStep, getStepNumber, TOTAL_STEPS } from '$lib/utils/route-guards.js';
+	import OcelotLogo from '$lib/components/ocelot-logo.svelte';
 
 	let isLoading = $state(false);
 	let isCompleting = $state(false);
@@ -75,9 +76,7 @@
 	<div class="flex flex-col gap-4 p-6 md:p-10">
 		<div class="flex justify-center gap-2 md:justify-start">
 			<a href="/login" class="flex items-center gap-2 font-medium">
-				<div class="bg-primary text-primary-foreground flex size-6 items-center justify-center rounded-md">
-					🪙
-				</div>
+				<OcelotLogo class="size-6" />
 				Ocelot Wallet
 			</a>
 		</div>
@@ -122,8 +121,8 @@
 							
 							<div class="pt-2 border-t border-border">
 								<div class="space-y-2">
-									<span class="text-sm text-muted-foreground">First Wallet Address</span>
-									<div class="font-mono text-xs bg-secondary rounded p-3 break-all">
+									<span class="text-sm text-muted-foreground">Your Wallet Address</span>
+									<div class="font-mono text-xs bg-secondary text-secondary-foreground rounded p-3 break-all">
 										{storeState.firstAddress}
 									</div>
 								</div>

@@ -65,6 +65,7 @@
 	let isSending = $state(false);
 	let sendError = $state('');
 	let showContactPicker = $state(false);
+	let currentBalance = $state(0);
 
 	let pollInterval: ReturnType<typeof setInterval>;
 	let isInitialLoad = $state(true);
@@ -200,6 +201,7 @@
 		sendError = '';
 		if (!recipient.trim()) { sendError = 'Recipient address is required'; return; }
 		if (!message.trim()) { sendError = 'Message is required'; return; }
+		if (currentBalance < parseFloat(DUST_AMOUNT)) { sendError = 'Insufficient balance — play the game to earn ZEI'; return; }
 		const credentials = authStore.getCredentials();
 		if (!credentials.wallet || !credentials.password) { sendError = 'Not authenticated'; return; }
 		isSending = true;
@@ -245,9 +247,24 @@
 			// Roll back the optimistic bubble on failure
 			messages = messages.filter(tx => tx.id !== optimisticId);
 			message = sentMessage;
-			sendError = result.error || 'Failed to send message';
+			const raw = result.error || '';
+		if (raw.toLowerCase().includes('invalid success field') || raw.toLowerCase().includes('insufficient') || raw.toLowerCase().includes('balance')) {
+			sendError = 'Insufficient balance — play the game to earn ZEI';
+		} else {
+			sendError = raw || 'Failed to send message';
+		}
 		}
 		isSending = false;
+	}
+
+	async function fetchBalance() {
+		if (!currentAddress) return;
+		const { tauriWalletAPI } = await import('$lib/services/tauri-wallet-api.js');
+		const rpcUrl = serverConfigStore.getCurrentRpcUrl();
+		const response = await tauriWalletAPI.getBalance(currentAddress, rpcUrl);
+		if (tauriWalletAPI.isSuccess(response)) {
+			currentBalance = parseFloat(tauriWalletAPI.unwrap(response).balance);
+		}
 	}
 
 	onMount(() => {
@@ -257,6 +274,7 @@
 		}
 		addressBookStore.init();
 		loadMessages();
+		fetchBalance();
 		pollInterval = setInterval(loadMessages, 5000);
 	});
 
@@ -286,7 +304,7 @@
 		<div class="flex flex-col flex-1 min-h-0 gap-2 p-4">
 
 			<!-- Message canvas -->
-			<div bind:this={chatContainer} class="flex-1 overflow-y-auto min-h-0 bg-card border rounded-xl p-4 space-y-4">
+			<div bind:this={chatContainer} class="flex-1 overflow-y-auto overflow-x-hidden min-h-0 bg-card border rounded-xl p-4 space-y-4">
 				{#if isLoading}
 					<div class="flex items-center justify-center h-full">
 						<p class="text-muted-foreground text-sm">Loading messages...</p>

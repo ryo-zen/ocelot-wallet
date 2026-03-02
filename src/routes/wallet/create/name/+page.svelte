@@ -6,6 +6,7 @@
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { walletCreationStore, type WalletCreationState } from '$lib/stores/wallet-creation.js';
 	import { validateWalletCreationStep, getStepNumber, TOTAL_STEPS } from '$lib/utils/route-guards.js';
+	import OcelotLogo from '$lib/components/ocelot-logo.svelte';
 	import { tauriWalletAPI } from '$lib/services/tauri-wallet-api.js';
 
 	let walletName = $state('');
@@ -125,9 +126,7 @@
 	<div class="flex flex-col gap-4 p-6 md:p-10">
 		<div class="flex justify-center gap-2 md:justify-start">
 			<a href="/login" class="flex items-center gap-2 font-medium">
-				<div class="bg-primary text-primary-foreground flex size-6 items-center justify-center rounded-md">
-					🪙
-				</div>
+				<OcelotLogo class="size-6" />
 				Ocelot Wallet
 			</a>
 		</div>
