@@ -38,11 +38,10 @@
 				onValueChange={onStatusFilterChange}
 			>
 				<Select.Trigger id="status-filter">
-					{statusFilter.length > 0 ? statusFilter.join(', ') : 'All Statuses'}
+					{statusFilter.length > 0 ? statusFilter.map(s => s[0].toUpperCase() + s.slice(1)).join(', ') : 'All Statuses'}
 				</Select.Trigger>
 				<Select.Content>
 					<Select.Group>
-						<Select.Item value="">All Statuses</Select.Item>
 						<Select.Item value="confirmed">Confirmed</Select.Item>
 						<Select.Item value="pending">Pending</Select.Item>
 						<Select.Item value="draft">Draft</Select.Item>
