@@ -87,6 +87,38 @@
 		addressBookEntries.find(e => e.address === recipient.trim()) ?? null
 	);
 
+	let tabMatches = $derived(
+		recipient.trim().length > 0 && !addressBookEntries.some(e => e.address === recipient.trim())
+			? addressBookEntries.filter(e =>
+				e.name.toLowerCase().includes(recipient.toLowerCase()) ||
+				e.address.toLowerCase().startsWith(recipient.toLowerCase())
+			)
+			: []
+	);
+
+	let tabIndex = $state(0);
+	let tabSuggestion = $derived(tabMatches[tabIndex] ?? null);
+
+	$effect(() => {
+		// Reset cycle index when the typed value changes
+		void recipient;
+		tabIndex = 0;
+	});
+
+	function handleRecipientKeydown(e: KeyboardEvent) {
+		if (e.key === 'Tab' && tabMatches.length > 0) {
+			e.preventDefault();
+			if (tabMatches.length === 1) {
+				recipient = tabMatches[0].address;
+			} else {
+				tabIndex = (tabIndex + 1) % tabMatches.length;
+			}
+		} else if (e.key === 'Enter' && tabSuggestion) {
+			e.preventDefault();
+			recipient = tabSuggestion.address;
+		}
+	}
+
 	function resolveName(address: string): string | null {
 		if (!address) return null;
 		if (address === currentAddress) return walletName || null;
@@ -200,6 +232,7 @@
 		e.preventDefault();
 		sendError = '';
 		if (!recipient.trim()) { sendError = 'Recipient address is required'; return; }
+		if (recipient.trim() === currentAddress) { sendError = "Can't send to yourself"; return; }
 		if (!message.trim()) { sendError = 'Message is required'; return; }
 		if (currentBalance < parseFloat(DUST_AMOUNT)) { sendError = 'Insufficient balance — play the game to earn ZEI'; return; }
 		const credentials = authStore.getCredentials();
@@ -378,7 +411,21 @@
 					<p class="text-destructive text-xs px-3 pt-2">{sendError}</p>
 				{/if}
 				<div class="flex gap-2 px-3 py-2">
-					<Input type="text" placeholder="To: tzei1..." bind:value={recipient} disabled={isSending} class="font-mono text-sm flex-1" />
+					<div class="relative flex-1">
+						<Input
+							type="text"
+							placeholder="To: tzei1..."
+							bind:value={recipient}
+							disabled={isSending}
+							class="font-mono text-sm w-full"
+							onkeydown={handleRecipientKeydown}
+						/>
+						{#if tabSuggestion}
+							<span class="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none flex items-center gap-1">
+								Tab <span class="leading-none">➔</span> {tabSuggestion.name}
+							</span>
+						{/if}
+					</div>
 					{#if resolvedRecipient}
 						<span class="text-xs text-muted-foreground self-center shrink-0">{resolvedRecipient.name}</span>
 					{/if}

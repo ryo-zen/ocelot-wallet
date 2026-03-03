@@ -78,6 +78,12 @@
 		error = '';
 		success = '';
 
+		const currentAddress = get(authStore).address;
+		if (currentAddress && recipient.trim() === currentAddress) {
+			error = "Can't send to yourself";
+			return;
+		}
+
 		const validation = validateTransaction(recipient, amount, currentBalance);
 		console.log('Validation result:', validation);
 		if (!validation.valid) {

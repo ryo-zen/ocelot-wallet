@@ -1,7 +1,11 @@
 <script lang="ts">
 	import * as DropdownMenu from "$lib/components/ui/dropdown-menu/index.js";
 	import * as Sidebar from "$lib/components/ui/sidebar/index.js";
+	import * as Dialog from "$lib/components/ui/dialog/index.js";
 	import { useSidebar } from "$lib/components/ui/sidebar/index.js";
+	import { Label } from "$lib/components/ui/label/index.js";
+	import { Input } from "$lib/components/ui/input/index.js";
+	import { Button } from "$lib/components/ui/button/index.js";
 	import ChevronsUpDownIcon from "@lucide/svelte/icons/chevrons-up-down";
 	import PlusIcon from "@lucide/svelte/icons/plus";
 	import WalletIcon from "@lucide/svelte/icons/wallet";
@@ -17,6 +21,13 @@
 	let availableWallets = $state<string[]>([]);
 	let isLoading = $state(true);
 
+	// Switch dialog state
+	let switchDialogOpen = $state(false);
+	let pendingWallet = $state('');
+	let switchPassword = $state('');
+	let switchError = $state('');
+	let isSwitching = $state(false);
+
 	onMount(async () => {
 		const authState = authStore.getCredentials();
 		if (authState.isAuthenticated && authState.wallet) {
@@ -31,16 +42,75 @@
 		isLoading = false;
 	});
 
-	async function switchWallet(walletName: string) {
+	function switchWallet(walletName: string) {
 		if (walletName === currentWallet) return;
-		authStore.logout();
-		goto(`/login?wallet=${encodeURIComponent(walletName)}`);
+		pendingWallet = walletName;
+		switchPassword = '';
+		switchError = '';
+		switchDialogOpen = true;
+	}
+
+	async function handleSwitchSubmit(event: Event) {
+		event.preventDefault();
+		if (!switchPassword) {
+			switchError = 'Please enter your password';
+			return;
+		}
+
+		isSwitching = true;
+		switchError = '';
+
+		const result = await authStore.login(pendingWallet, switchPassword);
+
+		if (result.success) {
+			currentWallet = pendingWallet;
+			switchDialogOpen = false;
+			switchPassword = '';
+			goto('/wallet/dashboard');
+		} else {
+			switchError = result.error || 'Incorrect password';
+		}
+
+		isSwitching = false;
 	}
 
 	function createNewWallet() {
 		goto('/wallet/create/name');
 	}
 </script>
+
+<Dialog.Root bind:open={switchDialogOpen}>
+	<Dialog.Content class="sm:max-w-sm">
+		<Dialog.Header>
+			<Dialog.Title>Switch to {pendingWallet}</Dialog.Title>
+			<Dialog.Description>Enter the password for this wallet to continue.</Dialog.Description>
+		</Dialog.Header>
+		<form onsubmit={handleSwitchSubmit} class="grid gap-4 py-2">
+			<div class="grid gap-2">
+				<Label for="switch-password">Password</Label>
+				<Input
+					id="switch-password"
+					type="password"
+					bind:value={switchPassword}
+					placeholder="Wallet password"
+					autofocus
+					disabled={isSwitching}
+				/>
+			</div>
+			{#if switchError}
+				<p class="text-sm text-destructive">{switchError}</p>
+			{/if}
+			<Dialog.Footer>
+				<Button type="button" variant="outline" onclick={() => (switchDialogOpen = false)} disabled={isSwitching}>
+					Cancel
+				</Button>
+				<Button type="submit" disabled={isSwitching}>
+					{isSwitching ? 'Unlocking...' : 'Unlock'}
+				</Button>
+			</Dialog.Footer>
+		</form>
+	</Dialog.Content>
+</Dialog.Root>
 
 <Sidebar.Menu>
 	<Sidebar.MenuItem>

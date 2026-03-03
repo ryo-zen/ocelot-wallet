@@ -112,9 +112,22 @@
 		}
 	}
 
+	let loadedForWallet = '';
+
 	onMount(() => {
-		console.log('Dashboard onMount - calling fetchBalance');
+		const creds = authStore.getCredentials();
+		loadedForWallet = creds.wallet ?? '';
+
 		fetchBalance();
+
+		const unsubscribe = authStore.subscribe(state => {
+			if (state.isAuthenticated && state.wallet && state.wallet !== loadedForWallet) {
+				loadedForWallet = state.wallet;
+				fetchBalance();
+			}
+		});
+
+		return unsubscribe;
 	});
 </script>
 
