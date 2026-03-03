@@ -10,7 +10,7 @@ interface ThemeState {
 }
 
 // Load theme from localStorage or default values
-const defaultState: ThemeState = { theme: 'default', mode: 'light' };
+const defaultState: ThemeState = { theme: 'geist', mode: 'dark' };
 
 function loadInitialState(): ThemeState {
 	if (!browser) return defaultState;
