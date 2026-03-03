@@ -27,5 +27,8 @@
 			alt="Ocelot Wallet Login"
 			class="absolute inset-0 h-full w-full object-cover object-center"
 		/>
+		<p class="absolute bottom-3 right-3 text-[11px] text-white/50">
+			Photo by <a href="https://unsplash.com/@harix" target="_blank" rel="noopener noreferrer" class="underline hover:text-white/80">Harrison Qi</a> on <a href="https://unsplash.com/" target="_blank" rel="noopener noreferrer" class="underline hover:text-white/80">Unsplash</a>
+		</p>
 	</div>
 </div>
