@@ -206,6 +206,8 @@ For issues and questions:
 
 ## Disclaimer
 
+**ZeiCoin is currently in TestNet and active development. Use at your own risk.**
+
 This is cryptocurrency wallet software. While we implement industry-standard security practices, you are responsible for:
 - Keeping your recovery phrase secure
 - Using strong passwords
