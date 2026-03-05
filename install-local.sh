@@ -31,6 +31,8 @@ Exec=/home/max/.local/bin/ocelot-wallet
 Icon=ocelot-wallet
 Type=Application
 Categories=Finance;
+StartupNotify=true
+StartupWMClass=ocelot-wallet
 EOF
 
 echo "Done. Restarting quickshell..."

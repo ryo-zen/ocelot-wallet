@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { Label } from "$lib/components/ui/label/index.js";
 	import { Input } from "$lib/components/ui/input/index.js";
 	import { Button } from "$lib/components/ui/button/index.js";
@@ -27,6 +27,7 @@
 
 	// Available wallets - from Tauri
 	let wallets = $state<Array<{ value: string; label: string }>>([]);
+	let selectOpen = $state(false);
 
 	const triggerContent = $derived(
 		wallets.find((w) => w.value === selectedWallet)?.label ?? "Select a wallet"
@@ -44,7 +45,6 @@
 				const data = tauriWalletAPI.unwrap(response);
 				const walletNames = data.wallets || [];
 
-				// Convert wallet names to the format expected by the Select component
 				wallets = walletNames.map(name => ({
 					value: name,
 					label: name.charAt(0).toUpperCase() + name.slice(1)
@@ -62,18 +62,17 @@
 		} finally {
 			walletsLoading = false;
 		}
+
 	});
 
 	async function handleSubmit(event: Event) {
 		event.preventDefault();
 
-		// Don't allow submission if wallets are still loading
 		if (walletsLoading) {
 			errorMessage = 'Please wait while wallets are loading';
 			return;
 		}
 
-		// Don't allow submission if no wallets are available
 		if (wallets.length === 0) {
 			errorMessage = 'No wallets available. Please create a wallet first.';
 			return;
@@ -88,14 +87,10 @@
 		errorMessage = '';
 
 		try {
-			// Use auth store's login method which uses Tauri internally
 			const result = await authStore.login(selectedWallet, password);
 
 			if (result.success) {
-				// Clear password from form
 				password = '';
-
-				// Navigate to main wallet interface
 				await goto('/wallet/dashboard');
 			} else {
 				errorMessage = result.error || 'Login failed';
@@ -119,8 +114,8 @@
 	<div class="grid gap-6">
 		<div class="grid gap-3">
 			<Label>Wallet</Label>
-			<Select.Root type="single" name="walletSelect" bind:value={selectedWallet} disabled={walletsLoading || wallets.length === 0}>
-				<Select.Trigger class="w-full">
+			<Select.Root type="single" name="walletSelect" bind:value={selectedWallet} bind:open={selectOpen}>
+				<Select.Trigger class="w-full" onclick={() => selectOpen = true}>
 					{#if walletsLoading}
 						Loading wallets...
 					{:else if wallets.length === 0}
