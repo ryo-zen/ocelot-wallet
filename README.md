@@ -9,6 +9,10 @@
 
 A secure non-custodial desktop wallet for ZeiCoin cryptocurrency, built with SvelteKit 5 and Tauri 2.
 
+# Status
+
+The wallet is currenetly in beta testing. Zeicoin is in testnet.
+
 ## Features
 
 - **Non-Custodial Security**: Your keys, your coins - wallet files encrypted locally
