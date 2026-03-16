@@ -74,9 +74,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh api "repos/${{ github.repository }}/releases/tags/${{ github.ref_name }}" \
-            --jq '.assets[] | select(.name | startswith("Ocelot Wallet")) | [(.id | tostring), .name] | @tsv' | \
+            --jq '.assets[] | select(.name | test("^Ocelot[. _]Wallet")) | [(.id | tostring), .name] | @tsv' | \
           while IFS=$'\t' read -r id name; do
-            new_name=$(echo "$name" | sed 's/Ocelot Wallet/ocelot-wallet/')
+            new_name=$(echo "$name" | sed 's/Ocelot[. _]Wallet/ocelot_wallet/')
             gh api --method PATCH "repos/${{ github.repository }}/releases/assets/$id" \
               -f name="$new_name" && echo "Renamed: $name -> $new_name" || echo "Already renamed: $name"
           done
