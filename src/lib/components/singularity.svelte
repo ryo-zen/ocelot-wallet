@@ -139,16 +139,24 @@
 		return `${m}m`;
 	}
 
+	function resolveColor(cssVar: string): string {
+		const el = document.createElement('div');
+		el.style.cssText = `display:none;color:var(${cssVar})`;
+		document.body.appendChild(el);
+		const resolved = getComputedStyle(el).color;
+		document.body.removeChild(el);
+		return resolved;
+	}
+
 	function colors() {
-		const s = getComputedStyle(document.documentElement);
 		return {
-			bg:        s.getPropertyValue('--card').trim(),
-			border:    s.getPropertyValue('--border').trim(),
-			primary:   s.getPropertyValue('--primary').trim(),
-			secondary: s.getPropertyValue('--secondary').trim(),
-			fg:        s.getPropertyValue('--foreground').trim(),
-			muted:     s.getPropertyValue('--muted').trim(),
-			accent:    s.getPropertyValue('--accent').trim(),
+			bg:        resolveColor('--card'),
+			border:    resolveColor('--border'),
+			primary:   resolveColor('--primary'),
+			secondary: resolveColor('--secondary'),
+			fg:        resolveColor('--foreground'),
+			muted:     resolveColor('--muted'),
+			accent:    resolveColor('--accent'),
 		};
 	}
 
