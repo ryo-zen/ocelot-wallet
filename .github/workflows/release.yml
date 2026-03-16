@@ -25,10 +25,10 @@ jobs:
     runs-on: ${{ matrix.platform }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.2.2
 
       - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
+        uses: oven-sh/setup-bun@v2
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -66,3 +66,17 @@ jobs:
           releaseDraft: false
           prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') }}
           args: ${{ matrix.args }}
+
+      - name: Rename release assets
+        if: github.ref_type == 'tag'
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api "repos/${{ github.repository }}/releases/tags/${{ github.ref_name }}" \
+            --jq '.assets[] | select(.name | startswith("Ocelot Wallet")) | [(.id | tostring), .name] | @tsv' | \
+          while IFS=$'\t' read -r id name; do
+            new_name=$(echo "$name" | sed 's/Ocelot Wallet/ocelot-wallet/')
+            gh api --method PATCH "repos/${{ github.repository }}/releases/assets/$id" \
+              -f name="$new_name" && echo "Renamed: $name -> $new_name" || echo "Already renamed: $name"
+          done
