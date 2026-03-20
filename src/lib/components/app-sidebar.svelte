@@ -1,4 +1,5 @@
 <script lang="ts" module>
+	import InfoIcon from "@lucide/svelte/icons/info";
 	import MessageSquareIcon from "@lucide/svelte/icons/message-square";
 	import Settings2Icon from "@lucide/svelte/icons/settings-2";
 	import SquareTerminalIcon from "@lucide/svelte/icons/square-terminal";
@@ -40,6 +41,12 @@
 						url: "/settings",
 					},
 				],
+			},
+			{
+				title: "Info",
+				url: "/info",
+				icon: InfoIcon,
+				items: [],
 			},
 		];
 </script>
