@@ -36,7 +36,7 @@ function cleanDOM(element: HTMLElement): void {
 	while ((node = walker.nextNode())) {
 		comments.push(node);
 	}
-	comments.forEach((comment) => comment.remove());
+	comments.forEach((comment) => comment.parentNode?.removeChild(comment));
 
 	// Remove inline styles and data-* attributes from all elements
 	element.querySelectorAll('*').forEach((el) => {

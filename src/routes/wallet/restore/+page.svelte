@@ -142,7 +142,7 @@
 			});
 
 			if (selected) {
-				const filePath = typeof selected === 'string' ? selected : selected.path;
+				const filePath = selected;
 				uploadedFileName = filePath.split('/').pop() || filePath.split('\\').pop() || 'unknown';
 
 				fileContent = await readTextFile(filePath);

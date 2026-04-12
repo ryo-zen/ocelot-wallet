@@ -195,10 +195,11 @@ describe('TauriWalletAPI', () => {
 
 			mockInvoke.mockResolvedValue(mockResponse);
 
-			const result = await api.getBalance('tzei1test123');
+			const result = await api.getBalance('tzei1test123', 'http://localhost:8080');
 
 			expect(mockInvoke).toHaveBeenCalledWith('get_balance', {
-				address: 'tzei1test123'
+				address: 'tzei1test123',
+				rpcUrl: 'http://localhost:8080'
 			});
 			expect(result.success).toBe(true);
 			expect(result.data?.balance).toBe('1000000000');
@@ -212,7 +213,7 @@ describe('TauriWalletAPI', () => {
 
 			mockInvoke.mockResolvedValue(mockResponse);
 
-			const result = await api.getBalance('tzei1test123');
+			const result = await api.getBalance('tzei1test123', 'http://localhost:8080');
 
 			expect(result.success).toBe(false);
 			expect(result.error).toContain('Failed to fetch balance');
@@ -234,14 +235,16 @@ describe('TauriWalletAPI', () => {
 				'test-wallet',
 				'password123',
 				'tzei1recipient',
-				1000000
+				1000000,
+				'http://localhost:8080'
 			);
 
 			expect(mockInvoke).toHaveBeenCalledWith('send_transaction', {
 				walletName: 'test-wallet',
 				password: 'password123',
 				recipient: 'tzei1recipient',
-				amount: 1000000
+				amount: 1000000,
+				rpcUrl: 'http://localhost:8080'
 			});
 			expect(result.success).toBe(true);
 			expect(result.data?.transaction_hash).toBe('hash123456');
@@ -255,7 +258,13 @@ describe('TauriWalletAPI', () => {
 
 			mockInvoke.mockResolvedValue(mockResponse);
 
-			const result = await api.sendTransaction('test-wallet', 'password123', 'tzei1recipient', 9999999999);
+			const result = await api.sendTransaction(
+				'test-wallet',
+				'password123',
+				'tzei1recipient',
+				9999999999,
+				'http://localhost:8080'
+			);
 
 			expect(result.success).toBe(false);
 			expect(result.error).toBe('Insufficient balance');

@@ -17,7 +17,7 @@
 	import Trash2Icon from "@lucide/svelte/icons/trash-2";
 	import SendIcon from "@lucide/svelte/icons/send";
 	import SearchIcon from "@lucide/svelte/icons/search";
-	import { addressBookStore, type AddressBookEntry } from '$lib/stores/address-book.js';
+	import { addressBookStore, type AddressBookEntry, type AddressBookState } from '$lib/stores/address-book.js';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 
@@ -30,7 +30,7 @@
 		{ value: 'other', label: 'Other' }
 	];
 
-	let addressBook = $state({ entries: [] });
+	let addressBook = $state<AddressBookState>({ entries: [] });
 	addressBookStore.subscribe(state => {
 		addressBook = state;
 	});

@@ -11,7 +11,7 @@ export interface AddressBookEntry {
 	lastUsed?: number;
 }
 
-interface AddressBookState {
+export interface AddressBookState {
 	entries: AddressBookEntry[];
 }
 

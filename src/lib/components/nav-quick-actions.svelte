@@ -8,13 +8,13 @@
 	import EllipsisIcon from "@lucide/svelte/icons/ellipsis";
 	import EditIcon from "@lucide/svelte/icons/edit";
 	import Trash2Icon from "@lucide/svelte/icons/trash-2";
-	import { addressBookStore } from '$lib/stores/address-book.js';
+	import { addressBookStore, type AddressBookState } from '$lib/stores/address-book.js';
 	import { goto } from '$app/navigation';
 
 	const sidebar = useSidebar();
 
 	// Subscribe to address book for frequent contacts
-	let addressBook = $state({ entries: [] });
+	let addressBook = $state<AddressBookState>({ entries: [] });
 	addressBookStore.subscribe(state => {
 		addressBook = state;
 	});

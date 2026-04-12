@@ -6,11 +6,12 @@
 		recipient: string;
 		amount: string;
 		message?: string;
+		category?: string;
 		onConfirm: () => void;
 		onCancel: () => void;
 	}
 
-	let { show, recipient, amount, message, onConfirm, onCancel }: Props = $props();
+	let { show, recipient, amount, message, category, onConfirm, onCancel }: Props = $props();
 
 	function handleBackgroundClick() {
 		onCancel();
@@ -57,6 +58,12 @@
 					<div class="space-y-1">
 						<span class="text-muted-foreground text-sm">Message</span>
 						<p class="text-sm">"{message}"</p>
+					</div>
+				{/if}
+				{#if category}
+					<div class="space-y-1">
+						<span class="text-muted-foreground text-sm">Category</span>
+						<p class="text-sm">{category}</p>
 					</div>
 				{/if}
 			</div>
