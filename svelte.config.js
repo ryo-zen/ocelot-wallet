@@ -8,11 +8,10 @@ const config = {
 	preprocess: vitePreprocess(),
 
 	kit: {
-		// Static adapter for Tauri desktop builds
+		// Static adapter for Tauri desktop builds. Routes are prerendered in src/routes/+layout.ts.
 		adapter: adapter({
 			pages: 'build',
 			assets: 'build',
-			fallback: 'index.html',
 			precompress: false,
 			strict: true
 		})
