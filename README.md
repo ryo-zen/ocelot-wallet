@@ -5,6 +5,13 @@
 
   </div>  
 
+> [!CAUTION]
+> **Official repositories only:**
+> - Wallet: https://github.com/ryo-zen/ocelot-wallet
+> - ZeiCoin: https://github.com/ryo-zen/zeicoin
+>
+> Any other repository is not affiliated with this project. Always download from the official repositories listed above.
+
 > [!WARNING]
 > **Pre-release software — not ready for production use.**
 > This is an alpha release (v0.1.0-alpha.1). Expect bugs, breaking changes, and missing features. Do not use with real funds. Only official source releases are published here — be cautious of any third-party binaries claiming to be Ocelot Wallet.
