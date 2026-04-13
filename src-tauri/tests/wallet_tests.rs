@@ -1,17 +1,29 @@
 // Integration tests for wallet module
 // Run with: cargo test --test wallet_tests
 
-use tempfile::TempDir;
 use std::env;
+use std::path::Path;
+use std::sync::{Mutex, MutexGuard};
+use tempfile::TempDir;
 
 // Import our library modules
 use app_lib::crypto;
-use app_lib::wallet::{Wallet, list_wallets};
+use app_lib::wallet::{list_wallets, Wallet};
+
+static TEST_ENV_LOCK: Mutex<()> = Mutex::new(());
+
+fn set_test_home(path: &Path) -> MutexGuard<'static, ()> {
+    let guard = TEST_ENV_LOCK
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    env::set_var("HOME", path);
+    guard
+}
 
 #[test]
 fn test_create_and_load_wallet() {
     let temp_dir = TempDir::new().unwrap();
-    env::set_var("HOME", temp_dir.path());
+    let _home_guard = set_test_home(temp_dir.path());
 
     // Create wallet
     let (wallet, mnemonic) = Wallet::create("test_wallet", "password123").unwrap();
@@ -31,7 +43,7 @@ fn test_create_and_load_wallet() {
 #[test]
 fn test_wallet_persistence() {
     let temp_dir = TempDir::new().unwrap();
-    env::set_var("HOME", temp_dir.path());
+    let _home_guard = set_test_home(temp_dir.path());
 
     Wallet::create("wallet1", "password123").unwrap();
     Wallet::create("wallet2", "password456").unwrap();
@@ -45,7 +57,7 @@ fn test_wallet_persistence() {
 #[test]
 fn test_restore_wallet_same_address() {
     let temp_dir = TempDir::new().unwrap();
-    env::set_var("HOME", temp_dir.path());
+    let _home_guard = set_test_home(temp_dir.path());
 
     // Create wallet and get mnemonic
     let (wallet1, mnemonic) = Wallet::create("original", "password123").unwrap();

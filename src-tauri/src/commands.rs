@@ -2,7 +2,7 @@
 ///
 /// These commands provide the same functionality as the CLI Bridge
 /// but run directly in the Tauri application without network calls.
-use crate::wallet::{Wallet, WalletInfo, list_wallets};
+use crate::wallet::{list_wallets, Wallet, WalletInfo};
 use serde::Serialize;
 
 /// Response format matching CLI Bridge
@@ -82,10 +82,7 @@ pub struct TransactionHistoryResponse {
 /// Create a new wallet
 /// Matches CLI Bridge: wallet_create command
 #[tauri::command]
-pub fn create_wallet(
-    name: String,
-    password: String,
-) -> CommandResponse<CreateWalletResponse> {
+pub fn create_wallet(name: String, password: String) -> CommandResponse<CreateWalletResponse> {
     match Wallet::create(&name, &password) {
         Ok((wallet, mnemonic)) => {
             let first_address = wallet.get_address();
@@ -223,7 +220,9 @@ pub fn send_transaction(
     };
     let recipient_bytes = match decode_address(&recipient) {
         Ok(bytes) => bytes,
-        Err(e) => return CommandResponse::error(format!("Failed to decode recipient address: {}", e)),
+        Err(e) => {
+            return CommandResponse::error(format!("Failed to decode recipient address: {}", e))
+        }
     };
 
     // Create binary transaction data for signing (matching Zig format exactly)
@@ -292,7 +291,10 @@ pub fn send_transaction(
         eprintln!("  Expiry Height: {}", expiry_height);
         eprintln!("  Current Height: {}", current_height);
         eprintln!("  Signature: {}", signature);
-        eprintln!("  Sender Public Key: {}", hex::encode(sender_public_key_bytes));
+        eprintln!(
+            "  Sender Public Key: {}",
+            hex::encode(sender_public_key_bytes)
+        );
         eprintln!("  TX hash (for signing): {}", hex::encode(&tx_hash_bytes));
         eprintln!("  TX data length: {} bytes", tx_data.len());
         eprintln!("  TX data (hex): {}", hex::encode(&tx_data));
@@ -334,9 +336,9 @@ pub fn get_transactions(
 
     let api = ZeiCoinAPI::with_base_url(&api_url);
     match api.get_transactions(&address, limit, offset) {
-        Ok(transactions_json) => CommandResponse::success(TransactionHistoryResponse {
-            transactions_json,
-        }),
+        Ok(transactions_json) => {
+            CommandResponse::success(TransactionHistoryResponse { transactions_json })
+        }
         Err(e) => CommandResponse::error(format!("Failed to fetch transactions: {}", e)),
     }
 }
@@ -379,11 +381,7 @@ pub struct FaucetResult {
 
 /// Call the testnet faucet with a game score to receive ZEI
 #[tauri::command]
-pub fn call_faucet(
-    address: String,
-    score: u32,
-    api_url: String,
-) -> CommandResponse<FaucetResult> {
+pub fn call_faucet(address: String, score: u32, api_url: String) -> CommandResponse<FaucetResult> {
     use crate::api::ZeiCoinAPI;
 
     let api = ZeiCoinAPI::with_base_url(&api_url);
@@ -436,7 +434,7 @@ pub fn create_encrypted_backup(
     password: String,
     mnemonic: String,
 ) -> CommandResponse<String> {
-    use crate::crypto::{encrypt, generate_salt, generate_nonce};
+    use crate::crypto::{encrypt, generate_nonce, generate_salt};
 
     // Load wallet to get address
     let wallet = match Wallet::load(&wallet_name, &password) {
@@ -494,7 +492,9 @@ pub fn create_plaintext_backup(
     };
 
     let address = wallet.get_address();
-    let created = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC").to_string();
+    let created = chrono::Utc::now()
+        .format("%Y-%m-%d %H:%M:%S UTC")
+        .to_string();
 
     // Format mnemonic words with numbers
     let words: Vec<&str> = mnemonic.split_whitespace().collect();
@@ -508,7 +508,7 @@ pub fn create_plaintext_backup(
 
     // Create plain text backup
     let backup_text = format!(
-r#"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        r#"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
                 ZEICOIN WALLET RECOVERY BACKUP
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -612,7 +612,12 @@ pub fn restore_from_encrypted_backup(
     // Decrypt mnemonic
     let decrypted = match decrypt(&encrypted, &key, &nonce_array) {
         Ok(d) => d,
-        Err(e) => return CommandResponse::error(format!("Failed to decrypt backup (wrong password?): {}", e)),
+        Err(e) => {
+            return CommandResponse::error(format!(
+                "Failed to decrypt backup (wrong password?): {}",
+                e
+            ))
+        }
     };
 
     let mnemonic = match String::from_utf8(decrypted) {
@@ -744,7 +749,7 @@ mod tests {
         use tempfile::TempDir;
 
         let temp_dir = TempDir::new().unwrap();
-        std::env::set_var("HOME", temp_dir.path());
+        let _home_guard = crate::set_test_home(temp_dir.path());
 
         // Generate a valid ZeiCoin mnemonic (with BLAKE3 checksum)
         let mnemonic = zeicoin_bip39::generate_mnemonic().unwrap();
@@ -771,10 +776,11 @@ mod tests {
         use tempfile::TempDir;
 
         let temp_dir = TempDir::new().unwrap();
-        std::env::set_var("HOME", temp_dir.path());
+        let _home_guard = crate::set_test_home(temp_dir.path());
 
         // Test wallet mnemonic generated by Zig
-        let mnemonic = "disorder curtain tribe digital level speak trust maze disorder injury boring secret";
+        let mnemonic =
+            "disorder curtain tribe digital level speak trust maze disorder injury boring secret";
 
         // Debug HD derivation step by step
         let seed = zeicoin_bip39::mnemonic_to_seed(mnemonic, None);
@@ -836,13 +842,20 @@ mod tests {
         println!("Mnemonic: {}", mnemonic);
         println!("Public Key: {}", hex::encode(wallet_pubkey));
         println!("Rust Address:  {}", address);
-        println!("Zig Address (coin type 882, BLAKE3): tzei1qzh7t4qqadlr99nl7ued6djja67a57ug2sc9xymd");
-        println!("Match: {}", address == "tzei1qzh7t4qqadlr99nl7ued6djja67a57ug2sc9xymd");
+        println!(
+            "Zig Address (coin type 882, BLAKE3): tzei1qzh7t4qqadlr99nl7ued6djja67a57ug2sc9xymd"
+        );
+        println!(
+            "Match: {}",
+            address == "tzei1qzh7t4qqadlr99nl7ued6djja67a57ug2sc9xymd"
+        );
         println!("========================================\n");
 
         // The address should match what Zig generates (with coin type 882 and BLAKE3)
-        assert_eq!(address, "tzei1qzh7t4qqadlr99nl7ued6djja67a57ug2sc9xymd",
-            "Rust must generate same address as Zig for same mnemonic!");
+        assert_eq!(
+            address, "tzei1qzh7t4qqadlr99nl7ued6djja67a57ug2sc9xymd",
+            "Rust must generate same address as Zig for same mnemonic!"
+        );
     }
 
     #[test]
@@ -856,7 +869,7 @@ mod tests {
 
         // Use temp directory for test wallet
         let temp_dir = TempDir::new().unwrap();
-        std::env::set_var("HOME", temp_dir.path());
+        let _home_guard = crate::set_test_home(temp_dir.path());
 
         // Step 1: Create wallet in Rust
         println!("\n📝 Step 1: Creating wallet in Rust...");
@@ -883,7 +896,10 @@ mod tests {
         // Step 2: Instructions for Zig restoration
         println!("\n📋 Step 2: Test Zig wallet restoration");
         println!("   Run this command on the server:");
-        println!("   zeicoin wallet restore \"{}\" --name compat-test-zig", mnemonic);
+        println!(
+            "   zeicoin wallet restore \"{}\" --name compat-test-zig",
+            mnemonic
+        );
         println!("   zeicoin address compat-test-zig");
         println!("");
         println!("   Expected address: {}", rust_address);
@@ -953,7 +969,7 @@ mod tests {
     #[test]
     fn test_create_wallet_command() {
         let temp_dir = TempDir::new().unwrap();
-        std::env::set_var("HOME", temp_dir.path());
+        let _home_guard = crate::set_test_home(temp_dir.path());
 
         let response = create_wallet("test_wallet".to_string(), "password123".to_string());
         assert!(response.success);
@@ -970,15 +986,11 @@ mod tests {
         use crate::zeicoin_bip39;
 
         let temp_dir = TempDir::new().unwrap();
-        std::env::set_var("HOME", temp_dir.path());
+        let _home_guard = crate::set_test_home(temp_dir.path());
 
         // Generate a valid ZeiCoin mnemonic (with BLAKE3 checksum)
         let mnemonic = zeicoin_bip39::generate_mnemonic().unwrap();
-        let response = restore_wallet(
-            "restored".to_string(),
-            mnemonic,
-            "password123".to_string(),
-        );
+        let response = restore_wallet("restored".to_string(), mnemonic, "password123".to_string());
 
         assert!(response.success);
         assert!(response.data.is_some());
@@ -990,7 +1002,7 @@ mod tests {
     #[test]
     fn test_list_wallets_command() {
         let temp_dir = TempDir::new().unwrap();
-        std::env::set_var("HOME", temp_dir.path());
+        let _home_guard = crate::set_test_home(temp_dir.path());
 
         // Create a wallet first
         create_wallet("test1".to_string(), "password123".to_string());
@@ -1009,7 +1021,7 @@ mod tests {
     #[test]
     fn test_unlock_wallet_command() {
         let temp_dir = TempDir::new().unwrap();
-        std::env::set_var("HOME", temp_dir.path());
+        let _home_guard = crate::set_test_home(temp_dir.path());
 
         // Create wallet first
         let create_response = create_wallet("test".to_string(), "password123".to_string());
@@ -1028,7 +1040,7 @@ mod tests {
     #[test]
     fn test_unlock_wallet_wrong_password() {
         let temp_dir = TempDir::new().unwrap();
-        std::env::set_var("HOME", temp_dir.path());
+        let _home_guard = crate::set_test_home(temp_dir.path());
 
         // Create wallet
         create_wallet("test".to_string(), "password123".to_string());
@@ -1042,7 +1054,7 @@ mod tests {
     #[test]
     fn test_get_address_command() {
         let temp_dir = TempDir::new().unwrap();
-        std::env::set_var("HOME", temp_dir.path());
+        let _home_guard = crate::set_test_home(temp_dir.path());
 
         // Create wallet
         let create_response = create_wallet("test".to_string(), "password123".to_string());

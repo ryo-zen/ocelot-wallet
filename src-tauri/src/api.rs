@@ -150,18 +150,23 @@ impl ZeiCoinAPI {
             .map_err(|e| format!("Failed to read RPC response: {}", e))?;
 
         // Parse JSON-RPC response
-        let rpc_response: JsonRpcResponse = serde_json::from_str(&response_text)
-            .map_err(|e| format!("Failed to parse RPC response: {} (response: {})", e, response_text))?;
+        let rpc_response: JsonRpcResponse = serde_json::from_str(&response_text).map_err(|e| {
+            format!(
+                "Failed to parse RPC response: {} (response: {})",
+                e, response_text
+            )
+        })?;
 
         // Check for RPC errors
         if let Some(error) = rpc_response.error {
             let error_str = error.to_string();
 
             // Check if it's an "account not found" or "invalid params" error (new wallet)
-            if error_str.contains("Invalid params") ||
-               error_str.contains("not found") ||
-               error_str.contains("-32602") ||
-               error_str.contains("Internal error") {
+            if error_str.contains("Invalid params")
+                || error_str.contains("not found")
+                || error_str.contains("-32602")
+                || error_str.contains("Internal error")
+            {
                 // New wallet - return zero balance
                 return Ok(Balance {
                     balance: 0,
@@ -222,10 +227,11 @@ impl ZeiCoinAPI {
             let error_str = error.to_string();
 
             // Check if it's an "account not found" error (new wallet)
-            if error_str.contains("Invalid params") ||
-               error_str.contains("not found") ||
-               error_str.contains("-32602") ||
-               error_str.contains("Internal error") {
+            if error_str.contains("Invalid params")
+                || error_str.contains("not found")
+                || error_str.contains("-32602")
+                || error_str.contains("Internal error")
+            {
                 // New wallet - return nonce 0
                 return Ok(0);
             }
@@ -236,10 +242,7 @@ impl ZeiCoinAPI {
         let result = rpc_response.result.ok_or("No result in RPC response")?;
 
         // Extract nonce from result
-        let nonce = result
-            .get("nonce")
-            .and_then(|v| v.as_u64())
-            .unwrap_or(0); // Default to 0 for new accounts
+        let nonce = result.get("nonce").and_then(|v| v.as_u64()).unwrap_or(0); // Default to 0 for new accounts
 
         Ok(nonce)
     }
@@ -434,7 +437,10 @@ impl ZeiCoinAPI {
 
         // Step 2: Mark pending
         self.client
-            .put(format!("{}/api/l2/messages/{}/pending", self.base_url, temp_id))
+            .put(format!(
+                "{}/api/l2/messages/{}/pending",
+                self.base_url, temp_id
+            ))
             .send()
             .map_err(|e| format!("L2 pending failed: {}", e))?;
 
@@ -445,7 +451,10 @@ impl ZeiCoinAPI {
         });
 
         self.client
-            .put(format!("{}/api/l2/messages/{}/confirm", self.base_url, temp_id))
+            .put(format!(
+                "{}/api/l2/messages/{}/confirm",
+                self.base_url, temp_id
+            ))
             .json(&confirm_body)
             .send()
             .map_err(|e| format!("L2 confirm failed: {}", e))?;

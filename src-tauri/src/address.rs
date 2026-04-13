@@ -28,8 +28,7 @@ pub fn encode_address(public_key: &VerifyingKey) -> Result<String, String> {
     data.extend_from_slice(address_bytes);
 
     // Create HRP (human-readable part)
-    let hrp = Hrp::parse(ZEICOIN_HRP)
-        .map_err(|e| format!("Invalid HRP: {}", e))?;
+    let hrp = Hrp::parse(ZEICOIN_HRP).map_err(|e| format!("Invalid HRP: {}", e))?;
 
     // Encode as Bech32
     let encoded = bech32::encode::<Bech32>(hrp, &data)
@@ -43,8 +42,8 @@ pub fn encode_address(public_key: &VerifyingKey) -> Result<String, String> {
 /// This matches Zig's Address struct format
 pub fn decode_address(address: &str) -> Result<Vec<u8>, String> {
     // Decode Bech32
-    let (hrp, data) = bech32::decode(address)
-        .map_err(|e| format!("Bech32 decoding failed: {}", e))?;
+    let (hrp, data) =
+        bech32::decode(address).map_err(|e| format!("Bech32 decoding failed: {}", e))?;
 
     // Verify HRP
     if hrp.as_str() != ZEICOIN_HRP {
@@ -65,7 +64,10 @@ pub fn decode_address(address: &str) -> Result<Vec<u8>, String> {
 
     // Verify witness version is 0
     if data[0] != 0 {
-        return Err(format!("Invalid witness version: expected 0, got {}", data[0]));
+        return Err(format!(
+            "Invalid witness version: expected 0, got {}",
+            data[0]
+        ));
     }
 
     // Return FULL address bytes including witness version (matching Zig's Address struct)
@@ -179,8 +181,12 @@ mod tests {
         match result {
             Err(msg) => {
                 // Accept either "Invalid address prefix" or bech32 decoding error
-                assert!(msg.contains("Invalid address") || msg.contains("decoding failed") || msg.contains("prefix"));
-            },
+                assert!(
+                    msg.contains("Invalid address")
+                        || msg.contains("decoding failed")
+                        || msg.contains("prefix")
+                );
+            }
             Ok(_) => panic!("Should have failed with invalid HRP"),
         }
     }

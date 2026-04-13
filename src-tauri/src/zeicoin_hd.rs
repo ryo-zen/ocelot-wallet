@@ -3,7 +3,6 @@
 /// Uses BLAKE3 instead of HMAC-SHA512 for Ed25519 key derivation (BIP32/BIP44 path structure).
 /// Optimized for performance and consistency with ZeiCoin blockchain cryptography.
 /// This implementation MUST match the Zig blockchain code exactly.
-
 use blake3;
 use ed25519_dalek::{SigningKey, VerifyingKey};
 use zeroize::ZeroizeOnDrop;

@@ -9,8 +9,8 @@
 /// - Secure memory clearing
 use crate::address::encode_address;
 use crate::crypto::{decrypt, derive_key, encrypt, generate_nonce, generate_salt};
-use crate::zeicoin_hd::HDKey;  // Use ZeiCoin custom HD derivation
-use crate::zeicoin_bip39;       // Use ZeiCoin custom BIP39 (BLAKE3-based)
+use crate::zeicoin_bip39; // Use ZeiCoin custom BIP39 (BLAKE3-based)
+use crate::zeicoin_hd::HDKey; // Use ZeiCoin custom HD derivation
 use ed25519_dalek::SigningKey;
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -75,8 +75,8 @@ impl Wallet {
         let seed = zeicoin_bip39::mnemonic_to_seed(&mnemonic_phrase, None);
 
         // Create HD key from seed using ZeiCoin's BLAKE3-based derivation
-        let hd_key = HDKey::from_seed(&seed)
-            .map_err(|e| format!("Failed to create HD key: {}", e))?;
+        let hd_key =
+            HDKey::from_seed(&seed).map_err(|e| format!("Failed to create HD key: {}", e))?;
 
         let wallet = Wallet {
             mnemonic: mnemonic_phrase.clone(),
@@ -109,8 +109,8 @@ impl Wallet {
         let seed = zeicoin_bip39::mnemonic_to_seed(mnemonic_phrase, None);
 
         // Create HD key from seed using ZeiCoin's BLAKE3-based derivation
-        let hd_key = HDKey::from_seed(&seed)
-            .map_err(|e| format!("Failed to create HD key: {}", e))?;
+        let hd_key =
+            HDKey::from_seed(&seed).map_err(|e| format!("Failed to create HD key: {}", e))?;
 
         let wallet = Wallet {
             mnemonic: mnemonic_phrase.to_string(),
@@ -174,8 +174,8 @@ impl Wallet {
         let seed = zeicoin_bip39::mnemonic_to_seed(&mnemonic_phrase, None);
 
         // Create HD key using ZeiCoin's BLAKE3-based derivation
-        let hd_key = HDKey::from_seed(&seed)
-            .map_err(|e| format!("Failed to create HD key: {}", e))?;
+        let hd_key =
+            HDKey::from_seed(&seed).map_err(|e| format!("Failed to create HD key: {}", e))?;
 
         Ok(Wallet {
             mnemonic: mnemonic_phrase,
@@ -251,7 +251,8 @@ impl Wallet {
 
     /// Get public key at current index
     pub fn get_public_key(&self) -> [u8; 32] {
-        let verifying_key = self.hd_key
+        let verifying_key = self
+            .hd_key
             .derive_public_key_at_index(self.index)
             .expect("Failed to derive public key");
         verifying_key.to_bytes()
@@ -339,7 +340,7 @@ mod tests {
     #[test]
     fn test_create_wallet() {
         let temp_dir = TempDir::new().unwrap();
-        std::env::set_var("HOME", temp_dir.path());
+        let _home_guard = crate::set_test_home(temp_dir.path());
 
         let result = Wallet::create("test_wallet", "password123");
         assert!(result.is_ok());
@@ -367,7 +368,7 @@ mod tests {
     #[test]
     fn test_restore_wallet() {
         let temp_dir = TempDir::new().unwrap();
-        std::env::set_var("HOME", temp_dir.path());
+        let _home_guard = crate::set_test_home(temp_dir.path());
 
         // Generate a valid ZeiCoin mnemonic (with BLAKE3 checksum)
         let mnemonic = zeicoin_bip39::generate_mnemonic().unwrap();
@@ -382,8 +383,7 @@ mod tests {
     #[test]
     fn test_load_wallet() {
         let temp_dir = TempDir::new().unwrap();
-        let temp_path = temp_dir.path().to_str().unwrap().to_string();
-        std::env::set_var("HOME", &temp_path);
+        let _home_guard = crate::set_test_home(temp_dir.path());
 
         // Create wallet
         let (wallet, _) = Wallet::create("test_wallet", "password123").unwrap();
@@ -401,7 +401,7 @@ mod tests {
     #[test]
     fn test_load_wallet_wrong_password() {
         let temp_dir = TempDir::new().unwrap();
-        std::env::set_var("HOME", temp_dir.path());
+        let _home_guard = crate::set_test_home(temp_dir.path());
 
         // Create wallet
         Wallet::create("test_wallet", "password123").unwrap();
@@ -414,8 +414,7 @@ mod tests {
     #[test]
     fn test_wallet_file_extension() {
         let temp_dir = TempDir::new().unwrap();
-        let temp_path = temp_dir.path().to_str().unwrap().to_string();
-        std::env::set_var("HOME", &temp_path);
+        let _home_guard = crate::set_test_home(temp_dir.path());
 
         let (_wallet, _) = Wallet::create("test_wallet", "password123").unwrap();
 
@@ -428,7 +427,7 @@ mod tests {
     #[test]
     fn test_hd_derivation() {
         let temp_dir = TempDir::new().unwrap();
-        std::env::set_var("HOME", temp_dir.path());
+        let _home_guard = crate::set_test_home(temp_dir.path());
 
         let (wallet, _) = Wallet::create("test_wallet", "password123").unwrap();
 
@@ -454,7 +453,7 @@ mod tests {
         let mnemonic = zeicoin_bip39::generate_mnemonic().unwrap();
 
         let temp_dir1 = TempDir::new().unwrap();
-        std::env::set_var("HOME", temp_dir1.path());
+        let _home_guard = crate::set_test_home(temp_dir1.path());
         let wallet1 = Wallet::restore("wallet1", &mnemonic, "password123").unwrap();
 
         let temp_dir2 = TempDir::new().unwrap();

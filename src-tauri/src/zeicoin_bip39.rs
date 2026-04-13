@@ -1,11 +1,10 @@
+use bip39::Language;
 /// ZeiCoin BIP39 Implementation with BLAKE3
 ///
 /// Uses BLAKE3 instead of SHA256/PBKDF2 for performance and consistency with ZeiCoin blockchain.
 /// ZeiCoin is a custom blockchain with Ed25519 signatures and tzei addresses, so standard BIP39
 /// compatibility is not relevant. This implementation MUST match the Zig blockchain code exactly.
-
 use blake3;
-use bip39::Language;
 use rand::RngCore;
 
 /// Generate a new 12-word mnemonic using BLAKE3 checksum (not SHA256!)
@@ -62,7 +61,8 @@ fn entropy_to_mnemonic(entropy: &[u8]) -> Result<String, String> {
             word_index = (word_index << 1) | (bit_string[start + j] as u16);
         }
         // Defensive bounds check (BIP39 wordlist has exactly 2048 words)
-        let word = wordlist.get(word_index as usize)
+        let word = wordlist
+            .get(word_index as usize)
             .ok_or_else(|| format!("Invalid word index: {} (max 2047)", word_index))?;
         words.push(*word);
     }
@@ -78,7 +78,10 @@ pub fn validate_mnemonic(mnemonic: &str) -> Result<(), String> {
 
     // Check word count (must be 12, 15, 18, 21, or 24)
     if ![12, 15, 18, 21, 24].contains(&word_count) {
-        return Err(format!("Invalid word count: expected 12, 15, 18, 21, or 24 words, got {}", word_count));
+        return Err(format!(
+            "Invalid word count: expected 12, 15, 18, 21, or 24 words, got {}",
+            word_count
+        ));
     }
 
     // Get BIP39 wordlist
@@ -87,7 +90,9 @@ pub fn validate_mnemonic(mnemonic: &str) -> Result<(), String> {
     // Convert words to indices
     let mut indices = Vec::new();
     for word in &words {
-        let index = wordlist.iter().position(|&w| w == *word)
+        let index = wordlist
+            .iter()
+            .position(|&w| w == *word)
             .ok_or_else(|| format!("Word not in BIP39 wordlist: {}", word))?;
         indices.push(index as u16);
     }

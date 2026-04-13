@@ -8,9 +8,7 @@ use aes_gcm::{
     aead::{Aead, KeyInit},
     Aes256Gcm, Nonce,
 };
-use argon2::{
-    Algorithm, Argon2, Params, Version,
-};
+use argon2::{Algorithm, Argon2, Params, Version};
 use ed25519_dalek::{Signature, Signer, SigningKey};
 
 /// Argon2 parameters matching Zig implementation
