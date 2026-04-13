@@ -5,13 +5,17 @@
 
   </div>  
 
+> [!WARNING]
+> **Pre-release software — not ready for production use.**
+> This is an alpha release (v0.1.0-alpha.1). Expect bugs, breaking changes, and missing features. Do not use with real funds. Only official source releases are published here — be cautious of any third-party binaries claiming to be Ocelot Wallet.
+
 # Ocelot Wallet
 
 A secure non-custodial desktop wallet for ZeiCoin cryptocurrency, built with SvelteKit 5 and Tauri 2.
 
 # Status
 
-The wallet is currenetly in beta testing. Zeicoin is in testnet.
+The wallet is currently in alpha. ZeiCoin is in testnet.
 
 ## Features
 
