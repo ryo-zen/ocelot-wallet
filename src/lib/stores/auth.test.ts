@@ -3,31 +3,31 @@
  * Uses TDD approach to verify authentication logic
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, mock, beforeEach, afterEach } from 'bun:test';
+import { Window } from 'happy-dom';
 import { get } from 'svelte/store';
 
+const testWindow = new Window();
+Object.defineProperties(globalThis, {
+	atob: { value: testWindow.atob.bind(testWindow), configurable: true },
+	btoa: { value: testWindow.btoa.bind(testWindow), configurable: true },
+	document: { value: testWindow.document, configurable: true },
+	sessionStorage: { value: testWindow.sessionStorage, configurable: true },
+	window: { value: testWindow, configurable: true }
+});
+
 // Mock @tauri-apps/api/core
-vi.mock('@tauri-apps/api/core', () => ({
-	invoke: vi.fn()
+const mockInvoke = mock();
+
+mock.module('@tauri-apps/api/core', () => ({
+	invoke: mockInvoke
 }));
 
-// Mock tauri-wallet-api
-vi.mock('$lib/services/tauri-wallet-api', () => ({
-	tauriWalletAPI: {
-		unlockWallet: vi.fn(),
-		isSuccess: vi.fn(),
-		unwrap: vi.fn()
-	}
-}));
-
-import { authStore } from './auth';
-import { tauriWalletAPI } from '$lib/services/tauri-wallet-api';
-
-const mockTauriWalletAPI = vi.mocked(tauriWalletAPI);
+const { authStore } = await import('./auth');
 
 describe('AuthStore', () => {
 	beforeEach(() => {
-		vi.clearAllMocks();
+		mockInvoke.mockReset();
 		// Clear session storage before each test
 		if (typeof window !== 'undefined') {
 			sessionStorage.clear();
@@ -36,7 +36,7 @@ describe('AuthStore', () => {
 	});
 
 	afterEach(() => {
-		vi.clearAllTimers();
+		authStore.logout();
 	});
 
 	describe('login', () => {
@@ -46,14 +46,15 @@ describe('AuthStore', () => {
 				data: { name: 'test-wallet', address: 'tzei1test123' }
 			};
 
-			mockTauriWalletAPI.unlockWallet.mockResolvedValue(mockResponse);
-			mockTauriWalletAPI.isSuccess.mockReturnValue(true);
-			mockTauriWalletAPI.unwrap.mockReturnValue(mockResponse.data);
+			mockInvoke.mockResolvedValue(mockResponse);
 
 			const result = await authStore.login('test-wallet', 'password123');
 
 			expect(result.success).toBe(true);
-			expect(mockTauriWalletAPI.unlockWallet).toHaveBeenCalledWith('test-wallet', 'password123');
+			expect(mockInvoke).toHaveBeenCalledWith('unlock_wallet', {
+				name: 'test-wallet',
+				password: 'password123'
+			});
 
 			const state = get(authStore);
 			expect(state.wallet).toBe('test-wallet');
@@ -67,8 +68,7 @@ describe('AuthStore', () => {
 				error: 'Invalid password'
 			};
 
-			mockTauriWalletAPI.unlockWallet.mockResolvedValue(mockResponse);
-			mockTauriWalletAPI.isSuccess.mockReturnValue(false);
+			mockInvoke.mockResolvedValue(mockResponse);
 
 			const result = await authStore.login('test-wallet', 'wrong-password');
 
@@ -80,7 +80,7 @@ describe('AuthStore', () => {
 		});
 
 		it('should handle network errors gracefully', async () => {
-			mockTauriWalletAPI.unlockWallet.mockRejectedValue(new Error('Network error'));
+			mockInvoke.mockRejectedValue(new Error('Network error'));
 
 			const result = await authStore.login('test-wallet', 'password123');
 
@@ -100,9 +100,7 @@ describe('AuthStore', () => {
 				data: { name: 'test-wallet', address: 'tzei1test123' }
 			};
 
-			mockTauriWalletAPI.unlockWallet.mockResolvedValue(mockResponse);
-			mockTauriWalletAPI.isSuccess.mockReturnValue(true);
-			mockTauriWalletAPI.unwrap.mockReturnValue(mockResponse.data);
+			mockInvoke.mockResolvedValue(mockResponse);
 
 			await authStore.login('test-wallet', 'password123');
 
@@ -125,9 +123,7 @@ describe('AuthStore', () => {
 				data: { name: 'test-wallet', address: 'tzei1test123' }
 			};
 
-			mockTauriWalletAPI.unlockWallet.mockResolvedValue(mockResponse);
-			mockTauriWalletAPI.isSuccess.mockReturnValue(true);
-			mockTauriWalletAPI.unwrap.mockReturnValue(mockResponse.data);
+			mockInvoke.mockResolvedValue(mockResponse);
 
 			await authStore.login('test-wallet', 'password123');
 			expect(sessionStorage.getItem('wallet_session')).toBeTruthy();
@@ -152,9 +148,7 @@ describe('AuthStore', () => {
 				data: { name: 'test-wallet', address: 'tzei1test123' }
 			};
 
-			mockTauriWalletAPI.unlockWallet.mockResolvedValue(mockResponse);
-			mockTauriWalletAPI.isSuccess.mockReturnValue(true);
-			mockTauriWalletAPI.unwrap.mockReturnValue(mockResponse.data);
+			mockInvoke.mockResolvedValue(mockResponse);
 
 			await authStore.login('test-wallet', 'password123');
 
@@ -177,9 +171,7 @@ describe('AuthStore', () => {
 				data: { name: 'test-wallet', address: 'tzei1test123' }
 			};
 
-			mockTauriWalletAPI.unlockWallet.mockResolvedValue(mockResponse);
-			mockTauriWalletAPI.isSuccess.mockReturnValue(true);
-			mockTauriWalletAPI.unwrap.mockReturnValue(mockResponse.data);
+			mockInvoke.mockResolvedValue(mockResponse);
 
 			await authStore.login('test-wallet', 'password123');
 
@@ -201,9 +193,7 @@ describe('AuthStore', () => {
 				data: { name: 'test-wallet', address: 'tzei1test123' }
 			};
 
-			mockTauriWalletAPI.unlockWallet.mockResolvedValue(mockResponse);
-			mockTauriWalletAPI.isSuccess.mockReturnValue(true);
-			mockTauriWalletAPI.unwrap.mockReturnValue(mockResponse.data);
+			mockInvoke.mockResolvedValue(mockResponse);
 
 			await authStore.login('test-wallet', 'password123');
 
@@ -248,9 +238,7 @@ describe('AuthStore', () => {
 				data: { name: 'test-wallet', address: 'tzei1test123' }
 			};
 
-			mockTauriWalletAPI.unlockWallet.mockResolvedValue(mockResponse);
-			mockTauriWalletAPI.isSuccess.mockReturnValue(true);
-			mockTauriWalletAPI.unwrap.mockReturnValue(mockResponse.data);
+			mockInvoke.mockResolvedValue(mockResponse);
 
 			await authStore.login('test-wallet', 'password123');
 

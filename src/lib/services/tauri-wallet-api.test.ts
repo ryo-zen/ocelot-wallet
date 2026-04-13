@@ -3,23 +3,24 @@
  * Uses TDD approach to verify all wallet operations
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, mock, beforeEach } from 'bun:test';
+import type { CommandResponse } from './tauri-wallet-api';
 
 // Mock @tauri-apps/api/core
-vi.mock('@tauri-apps/api/core', () => ({
-	invoke: vi.fn()
+const mockInvoke = mock();
+
+mock.module('@tauri-apps/api/core', () => ({
+	invoke: mockInvoke
 }));
 
-import { TauriWalletAPI, type CommandResponse } from './tauri-wallet-api';
-import { invoke } from '@tauri-apps/api/core';
+const { TauriWalletAPI } = await import('./tauri-wallet-api');
 
 describe('TauriWalletAPI', () => {
-	let api: TauriWalletAPI;
-	const mockInvoke = vi.mocked(invoke);
+	let api: InstanceType<typeof TauriWalletAPI>;
 
 	beforeEach(() => {
 		api = new TauriWalletAPI();
-		vi.clearAllMocks();
+		mockInvoke.mockReset();
 	});
 
 	describe('createWallet', () => {

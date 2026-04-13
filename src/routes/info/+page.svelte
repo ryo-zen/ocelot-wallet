@@ -4,7 +4,11 @@
 	import { Separator } from "$lib/components/ui/separator/index.js";
 	import * as Sidebar from "$lib/components/ui/sidebar/index.js";
 	import InfoIcon from "@lucide/svelte/icons/info";
-	import { openUrl } from '@tauri-apps/plugin-opener';
+
+	async function openExternalUrl(url: string) {
+		const { openUrl } = await import('@tauri-apps/plugin-opener');
+		await openUrl(url);
+	}
 </script>
 
 <Sidebar.Provider>
@@ -59,7 +63,7 @@
 				<h2 class="text-lg font-semibold mb-3">Roadmap</h2>
 				<p class="text-muted-foreground">
 					The planned development milestones for ZeiCoin are published at
-					<button onclick={() => openUrl('https://zeicoin.com/roadmap.html')} class="font-semibold underline underline-offset-2 cursor-pointer">zeicoin.com/roadmap.html</button>
+					<button onclick={() => openExternalUrl('https://zeicoin.com/roadmap.html')} class="font-semibold underline underline-offset-2 cursor-pointer">zeicoin.com/roadmap.html</button>
 				</p>
 			</div>
 
@@ -119,7 +123,7 @@
 					</div>
 					<div>
 						<p class="font-medium text-foreground mb-1">No support guarantees</p>
-						<p class="text-muted-foreground">Support is best-effort during this stage. If something breaks, please submit an issue at <button onclick={() => openUrl('https://github.com/ryo-zen/ocelot-wallet/issues')} class="font-semibold underline underline-offset-2 cursor-pointer">github.com/ryo-zen/ocelot-wallet/issues</button></p>
+						<p class="text-muted-foreground">Support is best-effort during this stage. If something breaks, please submit an issue at <button onclick={() => openExternalUrl('https://github.com/ryo-zen/ocelot-wallet/issues')} class="font-semibold underline underline-offset-2 cursor-pointer">github.com/ryo-zen/ocelot-wallet/issues</button></p>
 					</div>
 				</div>
 			</div>
