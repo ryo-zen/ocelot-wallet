@@ -12,6 +12,25 @@ use serde::{Deserialize, Serialize};
 // Production HTTPS endpoints (TLS 1.3 encrypted, Let's Encrypt certificate)
 const DEFAULT_API_BASE: &str = "https://api.zei.network";
 const DEFAULT_RPC_URL: &str = "https://rpc.zei.network";
+const WALLET_VERSION: &str = env!("CARGO_PKG_VERSION");
+
+fn wallet_user_agent() -> String {
+    format!("OcelotWallet/{WALLET_VERSION}")
+}
+
+fn build_http_client() -> reqwest::blocking::Client {
+    reqwest::blocking::Client::builder()
+        .timeout(std::time::Duration::from_secs(30))
+        .connect_timeout(std::time::Duration::from_secs(10))
+        .user_agent(wallet_user_agent())
+        .build()
+        .unwrap_or_else(|_| {
+            reqwest::blocking::Client::builder()
+                .user_agent(wallet_user_agent())
+                .build()
+                .expect("static wallet User-Agent should be valid")
+        })
+}
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Balance {
@@ -92,17 +111,8 @@ impl ZeiCoinAPI {
 
     /// Create a new API client with custom base URL
     pub fn with_base_url(base_url: &str) -> Self {
-        // Configure HTTPS client with TLS 1.3 support
-        // Note: Accepts self-signed certificates for now
-        // TODO: Replace with Let's Encrypt certificate for production
-        let client = reqwest::blocking::Client::builder()
-            .timeout(std::time::Duration::from_secs(30))
-            .connect_timeout(std::time::Duration::from_secs(10))
-            .build()
-            .unwrap_or_else(|_| reqwest::blocking::Client::new());
-
         ZeiCoinAPI {
-            client,
+            client: build_http_client(),
             base_url: base_url.to_string(),
             rpc_url: DEFAULT_RPC_URL.to_string(),
         }
@@ -110,14 +120,8 @@ impl ZeiCoinAPI {
 
     /// Create a new API client with custom RPC URL
     pub fn with_rpc_url(rpc_url: &str) -> Self {
-        let client = reqwest::blocking::Client::builder()
-            .timeout(std::time::Duration::from_secs(30))
-            .connect_timeout(std::time::Duration::from_secs(10))
-            .build()
-            .unwrap_or_else(|_| reqwest::blocking::Client::new());
-
         ZeiCoinAPI {
-            client,
+            client: build_http_client(),
             base_url: DEFAULT_API_BASE.to_string(),
             rpc_url: rpc_url.to_string(),
         }
@@ -472,6 +476,84 @@ impl Default for ZeiCoinAPI {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::io::{Read, Write};
+    use std::net::{TcpListener, TcpStream};
+    use std::thread::{self, JoinHandle};
+
+    fn read_request(stream: &mut TcpStream) -> String {
+        let mut request = Vec::new();
+        let mut buffer = [0; 1024];
+        let mut header_end = None;
+
+        while header_end.is_none() {
+            let bytes_read = stream.read(&mut buffer).unwrap();
+            if bytes_read == 0 {
+                break;
+            }
+
+            request.extend_from_slice(&buffer[..bytes_read]);
+            header_end = request
+                .windows(4)
+                .position(|window| window == b"\r\n\r\n")
+                .map(|position| position + 4);
+        }
+
+        if let Some(header_end) = header_end {
+            let content_length = {
+                let headers = String::from_utf8_lossy(&request[..header_end]);
+                headers
+                    .lines()
+                    .find_map(|line| {
+                        let (name, value) = line.split_once(':')?;
+                        if name.eq_ignore_ascii_case("content-length") {
+                            value.trim().parse::<usize>().ok()
+                        } else {
+                            None
+                        }
+                    })
+                    .unwrap_or(0)
+            };
+
+            while request.len() < header_end + content_length {
+                let bytes_read = stream.read(&mut buffer).unwrap();
+                if bytes_read == 0 {
+                    break;
+                }
+
+                request.extend_from_slice(&buffer[..bytes_read]);
+            }
+        }
+
+        String::from_utf8(request).unwrap()
+    }
+
+    fn spawn_response_server(response_body: &'static str) -> (String, JoinHandle<String>) {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let base_url = format!("http://{}", listener.local_addr().unwrap());
+        let handle = thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            let request = read_request(&mut stream);
+            let response = format!(
+                "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                response_body.len(),
+                response_body
+            );
+            stream.write_all(response.as_bytes()).unwrap();
+            request
+        });
+
+        (base_url, handle)
+    }
+
+    fn request_has_header(request: &str, name: &str, value: &str) -> bool {
+        request.lines().any(|line| {
+            let Some((header_name, header_value)) = line.split_once(':') else {
+                return false;
+            };
+
+            header_name.eq_ignore_ascii_case(name) && header_value.trim() == value
+        })
+    }
 
     #[test]
     fn test_api_client_creation() {
@@ -484,6 +566,40 @@ mod tests {
         let custom_url = "http://localhost:9000";
         let api = ZeiCoinAPI::with_base_url(custom_url);
         assert_eq!(api.base_url, custom_url);
+    }
+
+    #[test]
+    fn test_wallet_user_agent_value() {
+        assert_eq!(
+            wallet_user_agent(),
+            format!("OcelotWallet/{}", WALLET_VERSION)
+        );
+    }
+
+    #[test]
+    fn test_api_requests_send_wallet_user_agent() {
+        let (api_url, api_handle) = spawn_response_server(r#"{"transactions":[]}"#);
+        let api = ZeiCoinAPI::with_base_url(&api_url);
+        api.get_transactions("tzei1abc123", 10, 0).unwrap();
+        let api_request = api_handle.join().unwrap();
+
+        assert!(request_has_header(
+            &api_request,
+            "user-agent",
+            &wallet_user_agent()
+        ));
+
+        let rpc_response = r#"{"jsonrpc":"2.0","result":{"height":123},"id":1}"#;
+        let (rpc_url, rpc_handle) = spawn_response_server(rpc_response);
+        let api = ZeiCoinAPI::with_rpc_url(&rpc_url);
+        assert_eq!(api.get_height().unwrap(), 123);
+        let rpc_request = rpc_handle.join().unwrap();
+
+        assert!(request_has_header(
+            &rpc_request,
+            "user-agent",
+            &wallet_user_agent()
+        ));
     }
 
     #[test]
