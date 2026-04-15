@@ -51,6 +51,7 @@ test_*.rs
 *.wallet
 wallets/
 zeicoin_data*/
+/.izumi
 
 # Tauri build artifacts
 src-tauri/target/
@@ -58,6 +59,17 @@ src-tauri/Cargo.lock
 src-tauri/.svelte-kit/
 src-tauri/node_modules/
 src-tauri/gen/
+
+# Local release artifacts
+*.AppImage
+*.app.tar.gz
+*.dmg
+*.msi
+*.exe
+*.deb
+*.rpm
+*.sig
+SHA256SUMS*
 
 # Tauri debug and test files
 src-tauri/check_wallet.rs
@@ -72,3 +84,7 @@ static/placeholder.jpg
 # MCP configuration (personal settings)
 .mcp.json
 CLAUDE.md
+
+# Local assistant/session state
+.codex
+.codex/

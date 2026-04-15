@@ -1,11 +1,13 @@
 name: Release (Source Only)
 
 on:
+  push:
+    tags: ['v*']
   workflow_dispatch:
     inputs:
       tag:
         description: 'Tag to release (e.g. v0.2.0)'
-        required: true
+        required: false
 
 jobs:
   release:
@@ -16,21 +18,44 @@ jobs:
     steps:
       - uses: actions/checkout@v6.0.2
         with:
-          ref: ${{ github.event.inputs.tag }}
+          ref: ${{ github.event.inputs.tag || github.ref_name }}
 
       - name: Create source release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ github.event.inputs.tag || github.ref_name }}
+          RELEASE_PRERELEASE: ${{ contains(github.event.inputs.tag || github.ref_name, 'alpha') || contains(github.event.inputs.tag || github.ref_name, 'beta') }}
         run: |
-          gh release create "${{ github.event.inputs.tag }}" \
-            --title "Ocelot Wallet ${{ github.event.inputs.tag }}" \
-            --notes "## Ocelot Wallet ${{ github.event.inputs.tag }}
+          cat > release-notes.md <<EOF
+          ## Ocelot Wallet $RELEASE_TAG
 
-          A secure non-custodial desktop wallet for ZeiCoin.
+          Ocelot Wallet is source-only while it is pre-release.
 
           ### Source Code
           Download the source archives below (zip or tar.gz) and build from source.
 
+          ### Security Notice
+          No public desktop binaries are published for this pre-release. Do not trust Ocelot Wallet binaries from unofficial repositories, DMs, or third-party links. Use test wallets only.
+
           ### Build Instructions
-          See the [README](https://github.com/ryo-zen/ocelot-wallet#readme) for setup and build instructions." \
-            --prerelease=${{ contains(github.event.inputs.tag, 'alpha') || contains(github.event.inputs.tag, 'beta') }}
+          See the [README](https://github.com/ryo-zen/ocelot-wallet#readme) for setup and build instructions.
+          EOF
+
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release edit "$RELEASE_TAG" \
+              --title "Ocelot Wallet $RELEASE_TAG" \
+              --notes-file release-notes.md \
+              --prerelease="$RELEASE_PRERELEASE"
+          else
+            gh release create "$RELEASE_TAG" \
+              --title "Ocelot Wallet $RELEASE_TAG" \
+              --notes-file release-notes.md \
+              --prerelease="$RELEASE_PRERELEASE"
+          fi
+
+          gh release view "$RELEASE_TAG" --json assets --jq '.assets[].name' | while IFS= read -r asset; do
+            if [ -n "$asset" ]; then
+              echo "Deleting uploaded release asset to keep source-only release: $asset"
+              gh release delete-asset "$RELEASE_TAG" "$asset" --yes
+            fi
+          done
