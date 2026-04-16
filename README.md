@@ -5,6 +5,17 @@
 
   </div>  
 
+<p align="center">
+  <a href="https://zeicoin.com/download/"><img alt="Website" src="https://img.shields.io/website?url=https%3A%2F%2Fzeicoin.com%2Fdownload%2F&label=wallet%20site"></a>
+  <a href="https://github.com/ryo-zen/ocelot-wallet/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/ryo-zen/ocelot-wallet?style=flat"></a>
+  <a href="https://discord.gg/rUC4HyTk"><img alt="Discord" src="https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&logoColor=white"></a>
+</p>
+
+<p align="center">
+  <a href="https://zeicoin.com/download/">Website</a> ·
+  <a href="https://discord.gg/rUC4HyTk">Discord</a>
+</p>
+
 > [!CAUTION]
 > **Official repositories only:**
 > - Wallet: https://github.com/ryo-zen/ocelot-wallet
