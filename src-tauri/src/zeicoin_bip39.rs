@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2025-2026 Ryo Zen (https://github.com/ryo-zen)
+// SPDX-License-Identifier: GPL-3.0-only
+
 use bip39::Language;
 /// ZeiCoin BIP39 Implementation with BLAKE3
 ///

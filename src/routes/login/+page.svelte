@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: 2025-2026 Ryo Zen (https://github.com/ryo-zen)
+SPDX-License-Identifier: GPL-3.0-only
+-->
+
 <script lang="ts">
 	import LoginForm from "$lib/components/login-form.svelte";
 	import OcelotLogo from "$lib/components/ocelot-logo.svelte";

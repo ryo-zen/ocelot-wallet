@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2025-2026 Ryo Zen (https://github.com/ryo-zen)
+// SPDX-License-Identifier: GPL-3.0-only
+
 /// ZeiCoin HD Wallet Implementation with BLAKE3
 ///
 /// Uses BLAKE3 instead of HMAC-SHA512 for Ed25519 key derivation (BIP32/BIP44 path structure).

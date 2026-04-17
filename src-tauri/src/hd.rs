@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2025-2026 Ryo Zen (https://github.com/ryo-zen)
+// SPDX-License-Identifier: GPL-3.0-only
+
 /// HD Wallet Derivation - SLIP-0010 for Ed25519
 ///
 /// Uses SLIP-0010 standard for Ed25519 HD key derivation

@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: 2025-2026 Ryo Zen (https://github.com/ryo-zen)
+SPDX-License-Identifier: GPL-3.0-only
+-->
+
 <script lang="ts">
 	import { themeStore, type Theme, type Mode } from '$lib/stores/theme.js';
 	import * as Select from "$lib/components/ui/select/index.js";

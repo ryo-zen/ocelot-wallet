@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2025-2026 Ryo Zen (https://github.com/ryo-zen)
+# SPDX-License-Identifier: GPL-3.0-only
+
 node_modules
 
 # Output
@@ -46,12 +49,13 @@ shadcn-svelte-mcp-server.js
 # Test scripts
 test_*.sh
 test_*.rs
+scripts/add-spdx-headers.mjs
 
 # Wallet data (DO NOT COMMIT PRIVATE KEYS!)
 *.wallet
 wallets/
 zeicoin_data*/
-/.izumi
+/.izumi/
 
 # Tauri build artifacts
 src-tauri/target/

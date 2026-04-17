@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2025-2026 Ryo Zen (https://github.com/ryo-zen)
+// SPDX-License-Identifier: GPL-3.0-only
+
 // route-guards.ts - Wallet creation flow validation and route protection utilities
 // Implements security-first approach with step validation and direct access prevention
 

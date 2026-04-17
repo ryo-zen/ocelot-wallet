@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2025-2026 Ryo Zen (https://github.com/ryo-zen)
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { DropdownMenu as DropdownMenuPrimitive } from "bits-ui";
 import CheckboxItem from "./dropdown-menu-checkbox-item.svelte";
 import Content from "./dropdown-menu-content.svelte";

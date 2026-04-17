@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: 2025-2026 Ryo Zen (https://github.com/ryo-zen)
+SPDX-License-Identifier: GPL-3.0-only
+-->
+
 <script lang="ts" module>
 	import InfoIcon from "@lucide/svelte/icons/info";
 	import MessageSquareIcon from "@lucide/svelte/icons/message-square";

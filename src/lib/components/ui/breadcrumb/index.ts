@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2025-2026 Ryo Zen (https://github.com/ryo-zen)
+// SPDX-License-Identifier: GPL-3.0-only
+
 import Root from "./breadcrumb.svelte";
 import Ellipsis from "./breadcrumb-ellipsis.svelte";
 import Item from "./breadcrumb-item.svelte";

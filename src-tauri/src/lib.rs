@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2025-2026 Ryo Zen (https://github.com/ryo-zen)
+// SPDX-License-Identifier: GPL-3.0-only
+
 // Wallet modules
 pub mod address; // Bech32 address encoding
 pub mod api; // Transaction API client

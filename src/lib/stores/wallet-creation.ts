@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2025-2026 Ryo Zen (https://github.com/ryo-zen)
+// SPDX-License-Identifier: GPL-3.0-only
+
 // wallet-creation.ts - Secure wallet creation flow state management
 // Implements crypto industry best practices with memory clearing and timeouts
 

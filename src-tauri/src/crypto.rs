@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2025-2026 Ryo Zen (https://github.com/ryo-zen)
+// SPDX-License-Identifier: GPL-3.0-only
+
 /// Cryptography module for wallet encryption and signing
 ///
 /// Minimal, modular cryptographic primitives:

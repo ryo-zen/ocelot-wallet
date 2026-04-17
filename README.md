@@ -1,3 +1,7 @@
+<!--
+SPDX-FileCopyrightText: 2025-2026 Ryo Zen (https://github.com/ryo-zen)
+SPDX-License-Identifier: GPL-3.0-only
+-->
 
   <div align="center">   
 <img width="310" height="310" alt="Square310x310Logo" src="https://github.com/user-attachments/assets/052ed7a5-9374-441f-91cf-9c8c3dc3a179" />
