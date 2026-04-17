@@ -17,6 +17,27 @@ bun tauri dev
 bun tauri build
 ```
 
+## Build Identity Metadata
+
+The Rust API client sends wallet identity headers with every hosted API/RPC request:
+
+```text
+User-Agent: OcelotWallet/<version>
+X-Ocelot-App: com.ocelot.wallet
+X-Ocelot-Version: <cargo package version>
+X-Ocelot-Commit: <git commit sha>
+X-Ocelot-Channel: <build channel>
+X-Ocelot-Protocol: ocelot-wallet/2026-04-17
+X-Ocelot-Api-Version: 1
+```
+
+By default, `build.rs` reads the commit SHA from Git and marks the build channel as `local`. Official release automation should set:
+
+```bash
+OCELOT_BUILD_CHANNEL=official
+OCELOT_COMMIT_SHA="$(git rev-parse HEAD)"
+```
+
 ## Build Without MCP Plugin
 
 For platforms where the MCP plugin is not available (e.g., Windows without the plugin source):

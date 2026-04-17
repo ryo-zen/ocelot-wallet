@@ -10,28 +10,65 @@
 /// - Query transaction history
 ///
 /// Security: Uses HTTPS with TLS 1.3 encryption
+use reqwest::header::{HeaderMap, HeaderName, HeaderValue, USER_AGENT};
 use serde::{Deserialize, Serialize};
 
 // Production HTTPS endpoints (TLS 1.3 encrypted, Let's Encrypt certificate)
 const DEFAULT_API_BASE: &str = "https://api.zei.network";
 const DEFAULT_RPC_URL: &str = "https://rpc.zei.network";
+const WALLET_APP_ID: &str = "com.ocelot.wallet";
+const WALLET_API_VERSION: &str = "1";
+const WALLET_PROTOCOL: &str = "ocelot-wallet/2026-04-17";
 const WALLET_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 fn wallet_user_agent() -> String {
     format!("OcelotWallet/{WALLET_VERSION}")
 }
 
+fn wallet_commit_sha() -> &'static str {
+    option_env!("OCELOT_COMMIT_SHA").unwrap_or("unknown")
+}
+
+fn wallet_build_channel() -> &'static str {
+    option_env!("OCELOT_BUILD_CHANNEL").unwrap_or("local")
+}
+
+fn wallet_identity_headers() -> HeaderMap {
+    let mut headers = HeaderMap::new();
+
+    insert_header(&mut headers, USER_AGENT, &wallet_user_agent());
+    insert_static_header(&mut headers, "x-ocelot-app", WALLET_APP_ID);
+    insert_static_header(&mut headers, "x-ocelot-version", WALLET_VERSION);
+    insert_static_header(&mut headers, "x-ocelot-commit", wallet_commit_sha());
+    insert_static_header(&mut headers, "x-ocelot-channel", wallet_build_channel());
+    insert_static_header(&mut headers, "x-ocelot-protocol", WALLET_PROTOCOL);
+    insert_static_header(&mut headers, "x-ocelot-api-version", WALLET_API_VERSION);
+
+    headers
+}
+
+fn insert_static_header(headers: &mut HeaderMap, name: &'static str, value: &'static str) {
+    insert_header(headers, HeaderName::from_static(name), value);
+}
+
+fn insert_header(headers: &mut HeaderMap, name: HeaderName, value: &str) {
+    headers.insert(
+        name,
+        HeaderValue::from_str(value).expect("wallet identity header should be valid"),
+    );
+}
+
 fn build_http_client() -> reqwest::blocking::Client {
     reqwest::blocking::Client::builder()
         .timeout(std::time::Duration::from_secs(30))
         .connect_timeout(std::time::Duration::from_secs(10))
-        .user_agent(wallet_user_agent())
+        .default_headers(wallet_identity_headers())
         .build()
         .unwrap_or_else(|_| {
             reqwest::blocking::Client::builder()
-                .user_agent(wallet_user_agent())
+                .default_headers(wallet_identity_headers())
                 .build()
-                .expect("static wallet User-Agent should be valid")
+                .expect("static wallet identity headers should be valid")
         })
 }
 
@@ -530,19 +567,27 @@ mod tests {
         String::from_utf8(request).unwrap()
     }
 
-    fn spawn_response_server(response_body: &'static str) -> (String, JoinHandle<String>) {
+    fn spawn_response_sequence_server(
+        response_bodies: Vec<&'static str>,
+    ) -> (String, JoinHandle<Vec<String>>) {
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
         let base_url = format!("http://{}", listener.local_addr().unwrap());
         let handle = thread::spawn(move || {
-            let (mut stream, _) = listener.accept().unwrap();
-            let request = read_request(&mut stream);
-            let response = format!(
-                "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
-                response_body.len(),
-                response_body
-            );
-            stream.write_all(response.as_bytes()).unwrap();
-            request
+            let mut requests = Vec::with_capacity(response_bodies.len());
+
+            for response_body in response_bodies {
+                let (mut stream, _) = listener.accept().unwrap();
+                let request = read_request(&mut stream);
+                let response = format!(
+                    "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                    response_body.len(),
+                    response_body
+                );
+                stream.write_all(response.as_bytes()).unwrap();
+                requests.push(request);
+            }
+
+            requests
         });
 
         (base_url, handle)
@@ -556,6 +601,54 @@ mod tests {
 
             header_name.eq_ignore_ascii_case(name) && header_value.trim() == value
         })
+    }
+
+    fn assert_wallet_identity_headers(request: &str) {
+        assert!(request_has_header(
+            request,
+            "user-agent",
+            &wallet_user_agent()
+        ));
+        assert!(request_has_header(request, "x-ocelot-app", WALLET_APP_ID));
+        assert!(request_has_header(
+            request,
+            "x-ocelot-version",
+            WALLET_VERSION
+        ));
+        assert!(request_has_header(
+            request,
+            "x-ocelot-commit",
+            wallet_commit_sha()
+        ));
+        assert!(request_has_header(
+            request,
+            "x-ocelot-channel",
+            wallet_build_channel()
+        ));
+        assert!(request_has_header(
+            request,
+            "x-ocelot-protocol",
+            WALLET_PROTOCOL
+        ));
+        assert!(request_has_header(
+            request,
+            "x-ocelot-api-version",
+            WALLET_API_VERSION
+        ));
+    }
+
+    fn sample_signed_transaction() -> SignedTransaction {
+        SignedTransaction {
+            sender: "tzei1abc123".to_string(),
+            recipient: "tzei1def456".to_string(),
+            amount: 500000000,
+            fee: 0,
+            nonce: 1,
+            timestamp: 1234567890,
+            expiry_height: 0,
+            signature: "deadbeef".to_string(),
+            sender_public_key: "abcd1234".to_string(),
+        }
     }
 
     #[test]
@@ -580,29 +673,66 @@ mod tests {
     }
 
     #[test]
-    fn test_api_requests_send_wallet_user_agent() {
-        let (api_url, api_handle) = spawn_response_server(r#"{"transactions":[]}"#);
+    fn test_wallet_identity_values() {
+        assert_eq!(WALLET_APP_ID, "com.ocelot.wallet");
+        assert_eq!(WALLET_PROTOCOL, "ocelot-wallet/2026-04-17");
+        assert_eq!(WALLET_API_VERSION, "1");
+        assert!(!wallet_commit_sha().is_empty());
+        assert!(!wallet_build_channel().is_empty());
+    }
+
+    #[test]
+    fn test_api_requests_send_wallet_identity_headers() {
+        let (api_url, api_handle) = spawn_response_sequence_server(vec![
+            r#"{"transactions":[]}"#,
+            r#"{"success":true,"amount":"0.2","txid":"tx123"}"#,
+            r#"{"success":true,"temp_id":"tmp123"}"#,
+            r#"{"success":true}"#,
+            r#"{"success":true}"#,
+        ]);
         let api = ZeiCoinAPI::with_base_url(&api_url);
+
         api.get_transactions("tzei1abc123", 10, 0).unwrap();
-        let api_request = api_handle.join().unwrap();
+        api.call_faucet("tzei1abc123", 100).unwrap();
+        api.send_l2_message(
+            "tzei1abc123",
+            "tzei1def456",
+            Some("hello"),
+            Some("general"),
+            "tx123",
+        )
+        .unwrap();
 
-        assert!(request_has_header(
-            &api_request,
-            "user-agent",
-            &wallet_user_agent()
-        ));
+        let requests = api_handle.join().unwrap();
+        assert_eq!(requests.len(), 5);
+        for request in requests {
+            assert_wallet_identity_headers(&request);
+        }
+    }
 
-        let rpc_response = r#"{"jsonrpc":"2.0","result":{"height":123},"id":1}"#;
-        let (rpc_url, rpc_handle) = spawn_response_server(rpc_response);
+    #[test]
+    fn test_rpc_requests_send_wallet_identity_headers() {
+        let (rpc_url, rpc_handle) = spawn_response_sequence_server(vec![
+            r#"{"jsonrpc":"2.0","result":{"balance":10,"nonce":1},"id":1}"#,
+            r#"{"jsonrpc":"2.0","result":{"nonce":2},"id":1}"#,
+            r#"{"jsonrpc":"2.0","result":{"height":123},"id":1}"#,
+            r#"{"jsonrpc":"2.0","result":{"success":true,"tx_hash":"tx123"},"id":1}"#,
+        ]);
         let api = ZeiCoinAPI::with_rpc_url(&rpc_url);
-        assert_eq!(api.get_height().unwrap(), 123);
-        let rpc_request = rpc_handle.join().unwrap();
 
-        assert!(request_has_header(
-            &rpc_request,
-            "user-agent",
-            &wallet_user_agent()
-        ));
+        assert_eq!(api.get_balance("tzei1abc123").unwrap().balance, 10);
+        assert_eq!(api.get_nonce("tzei1abc123").unwrap(), 2);
+        assert_eq!(api.get_height().unwrap(), 123);
+        assert_eq!(
+            api.submit_transaction(sample_signed_transaction()).unwrap(),
+            "tx123"
+        );
+
+        let requests = rpc_handle.join().unwrap();
+        assert_eq!(requests.len(), 4);
+        for request in requests {
+            assert_wallet_identity_headers(&request);
+        }
     }
 
     #[test]
@@ -619,17 +749,7 @@ mod tests {
 
     #[test]
     fn test_signed_transaction_serialization() {
-        let tx = SignedTransaction {
-            sender: "tzei1abc123".to_string(),
-            recipient: "tzei1def456".to_string(),
-            amount: 500000000,
-            fee: 0,
-            nonce: 1,
-            timestamp: 1234567890,
-            expiry_height: 0,
-            signature: "deadbeef".to_string(),
-            sender_public_key: "abcd1234".to_string(),
-        };
+        let tx = sample_signed_transaction();
 
         let json = serde_json::to_string(&tx).unwrap();
         assert!(json.contains("tzei1abc123"));
