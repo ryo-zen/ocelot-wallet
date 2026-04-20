@@ -56,6 +56,7 @@ scripts/add-spdx-headers.mjs
 wallets/
 zeicoin_data*/
 /.izumi/
+/evidence/
 
 # Tauri build artifacts
 src-tauri/target/
