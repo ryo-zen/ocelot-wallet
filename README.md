@@ -32,7 +32,7 @@ SPDX-License-Identifier: GPL-3.0-only
 
 > [!WARNING]
 > **Experimental wallet — not ready for production use.**
-> This is an experimental alpha release (v0.1.0-alpha.1). Ocelot Wallet is under active development and has not been audited. Expect bugs, breaking changes, and missing features. Do not use with real funds. Only official source releases are published here — be cautious of any third-party binaries claiming to be Ocelot Wallet.
+> This is an experimental alpha release (v0.1.0-alpha.1). Ocelot Wallet is under active development and has not been audited. Expect bugs, breaking changes, and missing features. Do not use with real funds. Only official source releases are published here — no binaries are distributed. Be cautious of any third-party binaries claiming to be Ocelot Wallet.
 
 > [!IMPORTANT]
 > **ZeiCoin has no monetary value.** It is a testnet cryptocurrency intended solely for testing and experimentation.
@@ -77,21 +77,26 @@ The wallet is currently in alpha. ZeiCoin is in testnet.
 - JSON-RPC integration with ZeiCoin blockchain
 - HD derivation path: m/44'/882'/0'/0/{index}
 
-## Development Setup
+## Installation
+
+> [!IMPORTANT]
+> **No pre-built binaries are distributed.** Ocelot Wallet must be built from source. This is intentional — always build from the official repository and verify the signing key before use.
+
+## Building from Source
 
 ### Prerequisites
 
-- **Bun**: Package manager — [install](https://bun.sh)
+- **Node.js package manager**: [Bun](https://bun.sh) (recommended), npm, or yarn
 - **Rust**: For Tauri backend — [install via rustup](https://rustup.rs/)
 
-### Installation
+### Build
 
 ```bash
 # Clone the repository
 git clone https://github.com/ryo-zen/ocelot-wallet.git
 cd ocelot-wallet
 
-# Install dependencies
+# Install dependencies (bun recommended, npm/yarn also work)
 bun install
 
 # Start in development mode
@@ -117,6 +122,12 @@ bun tauri build
 
 # Output will be in: src-tauri/target/release/
 ```
+
+> [!NOTE]
+> **Arch Linux**: Use `NO_STRIP=1` when building AppImage bundles. Arch's system libraries use modern ELF RELR relocations that linuxdeploy's bundled `strip` binary is too old to handle.
+> ```bash
+> NO_STRIP=1 bun tauri build --bundles appimage
+> ```
 
 ## Testing
 
@@ -249,6 +260,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 For issues and questions:
 - Open an issue on GitHub
 - Check existing issues for solutions
+- Join the [Discord](https://discord.gg/rUC4HyTk) for community support and questions
 
 ## Disclaimer
 
