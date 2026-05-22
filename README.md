@@ -10,15 +10,18 @@ SPDX-License-Identifier: GPL-3.0-only
   </div>  
 
 <p align="center">
-  <a href="https://zeicoin.com/download/"><img alt="Website" src="https://img.shields.io/website?url=https%3A%2F%2Fzeicoin.com%2Fdownload%2F&label=wallet%20site"></a>
+  <a href="https://zeicoin.com"><img alt="Website" src="https://img.shields.io/website?url=https%3A%2F%2Fzeicoin.com&label=website"></a>
   <a href="https://github.com/ryo-zen/ocelot-wallet/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/ryo-zen/ocelot-wallet?style=flat"></a>
   <a href="https://discord.gg/dj3644tF7A"><img alt="Discord" src="https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&logoColor=white"></a>
 </p>
 
 <p align="center">
-  <a href="https://zeicoin.com/download/">Website</a> ·
+  <a href="https://zeicoin.com">Website</a> ·
   <a href="https://discord.gg/rUC4HyTk">Discord</a>
 </p>
+
+> [!NOTE]
+> **Commit signing key:** All official commits and tags are signed with SSH key `SHA256:I6wqk7BxxTAJLy7n4BVD9hmhWxx+oQKui7zpr7rn8rs`. Verify with `git log --show-signature`.
 
 > [!CAUTION]
 > **Official repositories only:**
@@ -28,8 +31,11 @@ SPDX-License-Identifier: GPL-3.0-only
 > Any other repository is not affiliated with this project. Always download from the official repositories listed above.
 
 > [!WARNING]
-> **Pre-release software — not ready for production use.**
-> This is an alpha release (v0.1.0-alpha.1). Expect bugs, breaking changes, and missing features. Do not use with real funds. Only official source releases are published here — be cautious of any third-party binaries claiming to be Ocelot Wallet.
+> **Experimental wallet — not ready for production use.**
+> This is an experimental alpha release (v0.1.0-alpha.1). Ocelot Wallet is under active development and has not been audited. Expect bugs, breaking changes, and missing features. Do not use with real funds. Only official source releases are published here — be cautious of any third-party binaries claiming to be Ocelot Wallet.
+
+> [!IMPORTANT]
+> **ZeiCoin has no monetary value.** It is a testnet cryptocurrency intended solely for testing and experimentation.
 
 # Ocelot Wallet
 
@@ -164,6 +170,16 @@ cargo test --lib -- --test-threads=1
 - **Session Management**: Auto-logout after 30 minutes of inactivity
 - **No Network Exposure**: All wallet operations via secure Tauri IPC
 - **Password Protection**: All operations require password authentication
+
+### Release Verification
+
+All official commits and tags are signed with the following SSH key:
+
+```
+SHA256:I6wqk7BxxTAJLy7n4BVD9hmhWxx+oQKui7zpr7rn8rs
+```
+
+Verify a commit with `git log --show-signature` or a tag with `git tag -v <tag>`.
 
 ### Security Best Practices
 
